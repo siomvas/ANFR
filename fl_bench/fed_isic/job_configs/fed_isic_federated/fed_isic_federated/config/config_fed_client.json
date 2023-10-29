@@ -1,16 +1,20 @@
 {
     "format_version": 2,
+    "client": {
+        "communication_timeout": 120.0
+    },
     "executors": [
         {
             "tasks": [
                 "train",
+                "submit_model",
                 "validate"
             ],
             "executor": {
                 "id": "Executor",
                 "name": "LearnerExecutor",
                 "args": {
-                    "learner_id": "isic-learner"
+                    "learner_id": "fed_isic-learner"
                 }
             }
         }
@@ -19,10 +23,14 @@
     "task_data_filters": [],
     "components": [
         {
-            "id": "isic-learner",
-            "path": "fl_bench.fed_isic.learners.fed_isic_base_learner.FedIsicLearner",
+            "id": "fed_isic-learner",
+            "path": "fl_bench.fed_isic.src.fed_isic_learner.FedISICLearner",
             "args": {
-                "train_config_filename": "config_train.json"
+                "config_train_name": "config_train.json",
+                "method": "scaffold",
+                "seed": 42,
+                "central": false,
+                "hyperion": true
             }
         }
     ]

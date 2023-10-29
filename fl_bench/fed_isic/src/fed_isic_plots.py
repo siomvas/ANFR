@@ -14,7 +14,7 @@ from sklearn.metrics import balanced_accuracy_score
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from fl_bench.networks.fed_isic_nets import *
-from fl_bench.utils.FedIsicDM import FedIsicDataModule
+from fl_bench.fed_isic.src.FedIsicDM import FedIsicDataModule
 
 
 def read_eventfile(filepath, tags=["val_metric_global_model"]):

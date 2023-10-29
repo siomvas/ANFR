@@ -10,9 +10,9 @@ import torch.optim
 
 from fl_bench.fed_isic.learners.my_learner import MyLearner
 from fl_bench.networks.fed_isic_nets import *
-from fl_bench.utils.FedIsicDM import FedIsicDataModule
+from fl_bench.fed_isic.src.FedIsicDM import FedIsicDataModule
 from fl_bench.utils.PTMOONLoss import PTMOONLoss
-from fl_bench.utils.WeightedFocalLoss import WeightedFocalLoss
+from fl_bench.fed_isic.src.WeightedFocalLoss import WeightedFocalLoss
 
 load_dotenv()
 
