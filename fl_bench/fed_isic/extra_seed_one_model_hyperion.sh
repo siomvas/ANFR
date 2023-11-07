@@ -1,6 +1,6 @@
 declare -a arr=("central" "scratch" "central" 2 8730 1 \
                 "fedavg" "scratch" "federated" 20 600 6 \
-                "fedopt" "scratch" "federated" 2 600 6 \
+                "fedopt" "scratch" "federated" 20 600 6 \
                 "scaffold" "scratch" "federated" 20 600 6 \
                 "central" "supervised" "central" 2 2910 1 \
                 "fedavg" "supervised" "federated" 20 200 6 \
@@ -22,5 +22,5 @@ do
     if (( i % 6 != 0 )); then
         continue
     fi
-    source extra_seed_core.sh ${model} ${seed} ${gpu} ${arr[i]} ${arr[i+1]} ${arr[i+2]} ${arr[i+3]} ${arr[i+4]} ${arr[i+5]}
+    source extra_seed_core_hyperion.sh ${model} ${seed} ${gpu} ${arr[i]} ${arr[i+1]} ${arr[i+2]} ${arr[i+3]} ${arr[i+4]} ${arr[i+5]}
 done
