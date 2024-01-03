@@ -773,3 +773,99 @@ def coatnetx_nano(seed): # 14.7M Parameters 2.5 GMACs
     return model
 
 coatnetx_nano_supervised = coatnetx_nano
+
+def caformer_supervised(seed):
+    seed_everything(seed)
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    model = timm.create_model(
+        'caformer_s18.sail_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+    os.environ['https_proxy'] = ''
+    return model
+
+
+class StarReLU(nn.Module):
+    """
+    StarReLU: s * relu(x) ** 2 + b
+    """
+    def __init__(self, scale_value=1.0, bias_value=0.0,
+        scale_learnable=True, bias_learnable=True, 
+        mode=None, inplace=False):
+        super().__init__()
+        self.inplace = inplace
+        self.relu = nn.ReLU(inplace=inplace)
+        self.scale = nn.Parameter(scale_value * torch.ones(1),
+            requires_grad=scale_learnable)
+        self.bias = nn.Parameter(bias_value * torch.ones(1),
+            requires_grad=bias_learnable)
+    def forward(self, x):
+        return self.scale * self.relu(x)**2 + self.bias
+    
+def silu_to_starrelu(model):
+    for name, child in model.named_children():
+
+        if isinstance(child, nn.SiLU):
+            setattr(model, name, StarReLU())
+
+        else:
+            silu_to_gelu(child)
+
+def starrelu_nfnet_l0(seed): # 24M parameters 4.4 GMACs
+    seed_everything(seed)
+    model = timm.create_model(
+        'nfnet_l0.ra2_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+
+    silu_to_starrelu(model)
+
+    return model
+
+starrelu_nfnet_l0_supervised = starrelu_nfnet_l0
+
+def starrelu_eca_nfnet_l0(seed): # 24M parameters 4.4 GMACs
+    seed_everything(seed)
+    model = timm.create_model(
+        'eca_nfnet_l0.ra2_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+
+    silu_to_starrelu(model)
+
+    return model
+
+starrelu_eca_nfnet_l0_supervised = starrelu_eca_nfnet_l0
+
+def starrelu_eca_nfnet_l1(seed): # 24M parameters 4.4 GMACs
+    seed_everything(seed)
+    model = timm.create_model(
+        'eca_nfnet_l1.ra2_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+
+    silu_to_starrelu(model)
+
+    return model
+
+starrelu_eca_nfnet_l1_supervised = starrelu_eca_nfnet_l1
+
+def starrelu_eca_nfnet_l2(seed): # 24M parameters 4.4 GMACs
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'eca_nfnet_l2.ra3_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+    os.environ['https_proxy'] = ''
+
+    silu_to_starrelu(model)
+
+    return model
+
+starrelu_eca_nfnet_l2_supervised = starrelu_eca_nfnet_l2

@@ -1,0 +1,9 @@
+{
+    "name": "fed_isic_federated_v2_caformer_supervised_80_0.0005_400_fed_isic_scaffold",
+    "deploy_map": {
+        "fed_isic_federated_v2": [
+            "@ALL"
+        ]
+    },
+    "min_clients": 6
+}

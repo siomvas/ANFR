@@ -2,11 +2,11 @@
     "learning_rate": 0.0005,
     "fedprox_mu": 0.0,
     "batch_size": 64,
-    "max_steps": 4000,
-    "model_name": "gelu_eca_nfnet_l2_supervised",
+    "max_steps": 12000,
+    "model_name": "vit_b_16_scratch",
     "optimizer_args": {
         "class": "Adam"
     },
-    "local_steps": 200,
+    "local_steps": 600,
     "use_half_precision": true
 }
