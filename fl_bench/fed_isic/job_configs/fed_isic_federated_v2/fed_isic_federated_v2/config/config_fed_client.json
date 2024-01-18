@@ -28,9 +28,9 @@
             "args": {
                 "config_train_name": "config_train.json",
                 "method": "scaffold",
-                "seed": 24,
+                "seed": 100,
                 "central": false,
-                "hyperion": false
+                "hyperion": true
             }
         }
     ]

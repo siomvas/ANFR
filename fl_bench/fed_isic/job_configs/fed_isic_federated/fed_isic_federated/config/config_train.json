@@ -2,11 +2,11 @@
     "learning_rate": 0.0005,
     "fedprox_mu": 0.0,
     "batch_size": 64,
-    "max_steps": 12000,
-    "model_name": "vit_b_16_scratch",
+    "max_steps": 40000,
+    "model_name": "MyEfficientNet_supervised",
     "optimizer_args": {
         "class": "Adam"
     },
-    "local_steps": 600,
+    "local_steps": 1000,
     "use_half_precision": true
 }

@@ -263,6 +263,41 @@ convnext_small_ssl = convnext_small_pretrained_ssl
 
 # EFFICIENTNETv2 (better than ViT)
 
+from efficientnet_pytorch import EfficientNet
+
+class MyEfficientNet(nn.Module):
+
+    def __init__(self, pretrained=True, arch_name="efficientnet-b0", num_classes=8):
+        super(MyEfficientNet, self).__init__()
+        self.pretrained = pretrained
+        os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+        self.base_model = (
+            EfficientNet.from_pretrained(arch_name)
+            if pretrained
+            else EfficientNet.from_name(arch_name)
+        )
+        nftrs = self.base_model._fc.in_features
+        self.base_model._fc = nn.Linear(nftrs, num_classes)
+        os.environ['https_proxy'] = ''
+
+    def forward(self, image, feature_out=False):
+        # Convolution layers
+        x = self.base_model.extract_features(image)
+        # Pooling and final linear layer
+        feature_x = self.base_model._avg_pooling(x)
+        if self.base_model._global_params.include_top:
+            x = feature_x.flatten(start_dim=1)
+            x = self.base_model._dropout(x)
+            x = self.base_model._fc(x)
+        if feature_out:
+            return x, feature_x.flatten(start_dim=1)
+        return x
+
+def MyEfficientNet_supervised(seed):
+    seed_everything(seed)
+    model = MyEfficientNet(pretrained=True, arch_name="efficientnet-b0", num_classes=NUM_CLASSES)
+    return model
+
 
 def efficientnet_v2_s(seed):
     seed_everything(seed)
@@ -583,12 +618,9 @@ def convmixer_pretrained(seed):
     return model
 
 
-# get model specific transforms (normalization, resize)
-# data_config = timm.data.resolve_model_data_config(model)
-# transforms = timm.data.create_transform(**data_config, is_training=False)
 
-
-def nfnet_f0(seed): # 71.5M parameters 7.2 GMACs
+def nfnet_f0(seed):
+    # Image size: train = 192 x 192, test = 256 x 256
     os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'dm_nfnet_f0.dm_in1k',
@@ -600,7 +632,8 @@ def nfnet_f0(seed): # 71.5M parameters 7.2 GMACs
 
 nfnet_f0_supervised = nfnet_f0
 
-def nfnet_l0(seed): # 35M parameters 4.4.GMAcs
+def nfnet_l0(seed):
+    # Image size: train = 224 x 224, test = 288 x 288
     os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'nfnet_l0.ra2_in1k',
@@ -612,7 +645,8 @@ def nfnet_l0(seed): # 35M parameters 4.4.GMAcs
 
 nfnet_l0_supervised = nfnet_l0
 
-def eca_nfnet_l0(seed): # 24M parameters 4.4 GMACs
+def eca_nfnet_l0(seed):
+    # Image size: train = 224 x 224, test = 288 x 288
     os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'eca_nfnet_l0.ra2_in1k',
@@ -625,7 +659,8 @@ def eca_nfnet_l0(seed): # 24M parameters 4.4 GMACs
 eca_nfnet_l0_supervised = eca_nfnet_l0
 
 
-def eca_nfnet_l1(seed): # 24M parameters 4.4 GMACs
+def eca_nfnet_l1(seed): 
+    # Image size: train = 256 x 256, test = 320 x 320
     os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'eca_nfnet_l1.ra2_in1k',
@@ -637,7 +672,8 @@ def eca_nfnet_l1(seed): # 24M parameters 4.4 GMACs
 
 eca_nfnet_l1_supervised = eca_nfnet_l1
 
-def eca_nfnet_l2(seed): # 24M parameters 4.4 GMACs
+def eca_nfnet_l2(seed):
+    # Image size: train = 320 x 320, test = 384 x 384
     os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'eca_nfnet_l2.ra3_in1k',
@@ -869,3 +905,83 @@ def starrelu_eca_nfnet_l2(seed): # 24M parameters 4.4 GMACs
     return model
 
 starrelu_eca_nfnet_l2_supervised = starrelu_eca_nfnet_l2
+
+def dm_nfnet_f0_supervised(seed):
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'dm_nfnet_f0.dm_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+    os.environ['https_proxy'] = ''
+    return model
+
+def dm_nfnet_f1_supervised(seed):
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'dm_nfnet_f1.dm_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+    os.environ['https_proxy'] = ''
+    return model
+
+def nf_regnet_b1_supervised(seed):
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'nf_regnet_b1.ra2_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+    os.environ['https_proxy'] = ''
+    return model
+
+def caformer_s36_supervised(seed):
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'caformer_s36.sail_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+    os.environ['https_proxy'] = ''
+    return model
+
+def convnext_v2_tiny_supervised(seed):
+    # Image size: train = 224 x 224, test = 288 x 288
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'convnextv2_tiny.fcmae_ft_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+    os.environ['https_proxy'] = ''
+    return model
+
+def caformer_m36_supervised(seed):
+    # Image size: 224 x 224, uses IN22k
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'caformer_m36.sail_in22k_ft_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+        )
+    os.environ['https_proxy'] = ''
+    return model
+
+def seresnet_50_supervised(seed):
+    # Image size: train = 224 x 224, test = 288 x 288
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'seresnet50.ra2_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+    )
+    os.environ['https_proxy'] = ''
+    return model

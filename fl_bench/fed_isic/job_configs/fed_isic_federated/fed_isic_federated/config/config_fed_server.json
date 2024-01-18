@@ -1,10 +1,10 @@
 {
     "format_version": 2,
     "min_clients": 6,
-    "num_rounds": 20,
-    "seed": 42,
+    "num_rounds": 40,
+    "seed": 100,
     "hyperion": false,
-    "model_path": "fl_bench.networks.fed_isic_nets.vit_b_16_scratch",
+    "model_path": "fl_bench.networks.fed_isic_nets.MyEfficientNet_supervised",
     "server": {
         "heart_beat_timeout": 600
     },

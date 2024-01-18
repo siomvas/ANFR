@@ -1,5 +1,5 @@
 {
-    "name": "fed_isic_federated_vit_b_16_scratch_20_0.0005_600_fed_isic_fedavg",
+    "name": "fed_isic_federated_MyEfficientNet_supervised_40_0.0005_1000_fed_isic_fedbn",
     "deploy_map": {
         "fed_isic_federated": [
             "@ALL"

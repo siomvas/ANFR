@@ -23,14 +23,14 @@ from .utils import load_weights, extract_weights, seed_everything
 from .validator import Validator
 from fl_bench.networks.fed_isic_nets import *
 
-from .trainers import BaseTrainer, ScaffoldTrainer, BaseTrainerv2, ScaffoldTrainerv2
+from .trainers import *
 
 
 class FedISICLearner(Learner):
     def __init__(
         self,
         config_train_name: str,
-        method: Literal["fedavg", "fedprox", "fedopt", "scaffold"],
+        method: Literal["fedavg", "fedprox", "fedopt", "scaffold", "fedbn", "fedattn"],
         seed: int,
         max_retry: int = 1,
         central: bool = False,
@@ -99,6 +99,8 @@ class FedISICLearner(Learner):
 
         if self.method in ["fedavg", "fedprox", "fedopt", 'fedinit']:
             self.trainer = BaseTrainer(config_train, self.method, self.class_weights)
+        elif self.method == "fedbn":
+            self.trainer = FedBNTrainer(config_train, self.method, self.class_weights)
         elif self.method == "scaffold":
             self.trainer = ScaffoldTrainer(config_train, self.method, self.class_weights)
             exclude_vars = ["num_batches_tracked", "attn.relative_position_index"]
@@ -354,7 +356,7 @@ class FedISICLearner_v2(Learner):
     def __init__(
         self,
         config_train_name: str,
-        method: Literal["fedavg", "fedprox", "fedopt", "scaffold"],
+        method: Literal["fedavg", "fedprox", "fedopt", "scaffold", 'fedbn', "fedattn"],
         seed: int,
         max_retry: int = 1,
         central: bool = False,
@@ -423,6 +425,10 @@ class FedISICLearner_v2(Learner):
 
         if self.method in ["fedavg", "fedprox", "fedopt", 'fedinit']:
             self.trainer = BaseTrainerv2(config_train, self.method, self.class_weights)
+        elif self.method == "fedbn":
+            self.trainer = FedBNTrainer(config_train, self.method, self.class_weights)
+        elif self.method == "fedattn":
+            self.trainer = FedAttnTrainer(config_train, self.method, self.class_weights)
         elif self.method == "scaffold":
             self.trainer = ScaffoldTrainerv2(config_train, self.method, self.class_weights)
             exclude_vars = ["num_batches_tracked", "attn.relative_position_index"]
