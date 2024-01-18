@@ -234,8 +234,8 @@ class FedBNTrainer(BaseTrainer):
                 #  Gradient accumulation
                 if (i + 1) % self.gradient_accumulation_steps == 0:
                     # Gradient clipping
-                    # self.scaler.unscale_(self.opt)
-                    # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0, norm_type=2.0)
+                    self.scaler.unscale_(self.opt)
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0, norm_type=2.0)
 
                     # Apply gradient
                     self.scaler.step(self.opt)
@@ -411,8 +411,8 @@ class FedAttnTrainer(BaseTrainer):
                 #  Gradient accumulation
                 if (i + 1) % self.gradient_accumulation_steps == 0:
                     # Gradient clipping
-                    # self.scaler.unscale_(self.opt)
-                    # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0, norm_type=2.0)
+                    self.scaler.unscale_(self.opt)
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0, norm_type=2.0)
 
                     # Apply gradient
                     self.scaler.step(self.opt)
@@ -466,9 +466,9 @@ class FedAttnTrainer(BaseTrainer):
 
         self.sch = CosineWarmupScheduler(
             self.opt,
-            warmup_epochs=self.max_steps*0.05,
+            warmup_epochs=self.max_steps*0.2,
             max_epochs=self.max_steps/self.gradient_accumulation_steps,
-            end_value=1
+            end_value=0.001
         )
         if self.sch_state is not None:
             self.sch.load_state_dict(self.sch_state)
@@ -661,7 +661,7 @@ class BaseTrainerv2(object):
     """
     Difference from BaseTrainer:
     - gradient clipping (l2 norm at 1.0)
-    - slightly different lr scheduler: 0.2 warmup, 0.05 final lr
+    - slightly different lr scheduler: 0.2 warmup, 0.001 final lr
 
     """    
     def __init__(self, train_config: Dict, method: str, class_weights):
@@ -851,7 +851,7 @@ class BaseTrainerv2(object):
 
 
 
-class ScaffoldTrainerv2(BaseTrainer):
+class ScaffoldTrainerv2(BaseTrainerv2):
     def __init__(self, train_config: Dict, method: str, class_weights):
         super().__init__(train_config, method, class_weights)
         self.scaffold_helper = AltScaffoldHelper()

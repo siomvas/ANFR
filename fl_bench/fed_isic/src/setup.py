@@ -103,6 +103,13 @@ def main():
         server_config["task_result_filters"] = []
         server_config["components"][4]["args"]["expected_data_kind"] = "WEIGHT_DIFF"
         server_config["workflows"][0]["name"] = "ScatterAndGather"
+    
+    if args.method == "fedattn":
+        server_config["components"][4]["args"]["exclude_vars"] = "attn"
+    elif args.method == "fedbn":
+        server_config["components"][4]["args"]["exclude_vars"] = "bn"
+    else:
+        server_config["components"][4]["args"]["exclude_vars"] = ""
 
     job_name += f"_fed_isic_{args.method}"
     # update seed
