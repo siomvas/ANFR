@@ -32,7 +32,7 @@ class FedIsicDataModule():
         self.central = central
         self.batch_size = batch_size
         self.transform_train = A.Compose([
-            # A.RandomScale(0.07),
+            A.RandomScale(0.07),
             A.Rotate(50),
             A.RandomBrightnessContrast(0.15, 0.1),
             A.Flip(p=0.5),
@@ -45,7 +45,7 @@ class FedIsicDataModule():
         self.transform_valid = A.Compose([
             A.CenterCrop(200, 200),
             A.Normalize(always_apply=True),
-            A.Resize(288, 288)
+            A.Resize(224, 224)
         ])
         self.setup()
 
