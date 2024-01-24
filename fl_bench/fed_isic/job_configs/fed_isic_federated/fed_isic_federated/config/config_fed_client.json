@@ -28,9 +28,9 @@
             "args": {
                 "config_train_name": "config_train.json",
                 "method": "fedbn",
-                "seed": 100,
+                "seed": 600,
                 "central": false,
-                "hyperion": false
+                "hyperion": true
             }
         }
     ]

@@ -426,9 +426,9 @@ class FedISICLearner_v2(Learner):
         if self.method in ["fedavg", "fedprox", "fedopt", 'fedinit']:
             self.trainer = BaseTrainerv2(config_train, self.method, self.class_weights)
         elif self.method == "fedbn":
-            self.trainer = FedBNTrainer(config_train, self.method, self.class_weights)
+            self.trainer = FedBNTrainerv2(config_train, self.method, self.class_weights)
         elif self.method == "fedattn":
-            self.trainer = FedAttnTrainer(config_train, self.method, self.class_weights)
+            self.trainer = FedAttnTrainerv2(config_train, self.method, self.class_weights)
         elif self.method == "scaffold":
             self.trainer = ScaffoldTrainerv2(config_train, self.method, self.class_weights)
             exclude_vars = ["num_batches_tracked", "attn.relative_position_index"]

@@ -23,6 +23,7 @@ def main():
     parser.add_argument("-seed", type=int, default=222)
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--use_hyperion_dirs", action="store_true")
+    parser.add_argument("--interp_method", type=str, default="", choices=["", "linear", "inverse_linear", "fixbn", "const"])
     parser.add_argument("--batch_size", type=int, default=128)
 
     args = parser.parse_args()
@@ -60,6 +61,10 @@ def main():
     # update max steps
     print(f"Setting max steps = {args.num_rounds * args.local_steps}")
     train_config["max_steps"] = args.num_rounds * args.local_steps
+
+    # update interp method
+    print(f"Setting interp method = {args.interp_method}")
+    train_config["interp_method"] = args.interp_method
 
     # update method
     # convert central to fedavg for config
@@ -105,7 +110,7 @@ def main():
         server_config["workflows"][0]["name"] = "ScatterAndGather"
     
     if args.method == "fedattn":
-        server_config["components"][4]["args"]["exclude_vars"] = "attn"
+        server_config["components"][4]["args"]["exclude_vars"] = "attn|se"
     elif args.method == "fedbn":
         server_config["components"][4]["args"]["exclude_vars"] = "bn"
     else:

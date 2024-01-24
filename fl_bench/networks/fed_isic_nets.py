@@ -985,3 +985,16 @@ def seresnet_50_supervised(seed):
     )
     os.environ['https_proxy'] = ''
     return model
+
+
+def deit_3_base_supervised(seed):
+    # Image size: 224 x 224, 
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'deit3_base_patch16_224.fb_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+    )
+    os.environ['https_proxy'] = ''
+    return model

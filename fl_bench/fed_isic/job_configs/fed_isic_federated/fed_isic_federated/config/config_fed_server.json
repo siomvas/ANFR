@@ -1,9 +1,9 @@
 {
     "format_version": 2,
     "min_clients": 6,
-    "num_rounds": 40,
-    "seed": 100,
-    "hyperion": false,
+    "num_rounds": 80,
+    "seed": 600,
+    "hyperion": true,
     "model_path": "fl_bench.networks.fed_isic_nets.MyEfficientNet_supervised",
     "server": {
         "heart_beat_timeout": 600
@@ -59,7 +59,8 @@
             "id": "aggregator",
             "name": "InTimeAccumulateWeightedAggregator",
             "args": {
-                "expected_data_kind": "WEIGHT_DIFF"
+                "expected_data_kind": "WEIGHT_DIFF",
+                "exclude_vars": "bn"
             }
         },
         {

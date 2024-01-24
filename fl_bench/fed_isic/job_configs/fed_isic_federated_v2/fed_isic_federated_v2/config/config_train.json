@@ -3,10 +3,11 @@
     "fedprox_mu": 0.0,
     "batch_size": 32,
     "max_steps": 32000,
-    "model_name": "eca_nfnet_l2_supervised",
+    "model_name": "deit_3_base_supervised",
     "optimizer_args": {
         "class": "Adam"
     },
     "local_steps": 400,
-    "use_half_precision": true
+    "use_half_precision": true,
+    "interp_method": ""
 }
