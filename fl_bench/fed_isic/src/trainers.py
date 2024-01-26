@@ -12,6 +12,10 @@ from .validator import Validator
 from fl_bench.utils.AltScaffoldHelper import AltScaffoldHelper, get_lr_values
 from fl_bench.fed_isic.src.utils import WeightedFocalLoss
 from lightly.utils.scheduler import CosineWarmupScheduler
+from nvflare.apis.fl_component import FLComponent
+from nvflare.apis.utils.fl_context_utils import generate_log_message
+from nvflare.apis.event_type import EventType
+from nvflare.apis.fl_constant import LogMessageTag
 
 class BaseTrainer(object):
     def __init__(self, train_config: Dict, method: str, class_weights):
@@ -486,7 +490,7 @@ class ScaffoldTrainer(BaseTrainer):
                 )
 
 
-class BaseTrainerv2(object):
+class BaseTrainerv2(FLComponent, object):
     """
     Difference from BaseTrainer:
     - gradient clipping (l2 norm at 1.0)
@@ -494,6 +498,11 @@ class BaseTrainerv2(object):
 
     """    
     def __init__(self, train_config: Dict, method: str, class_weights):
+        super().__init__()
+        # rename FL logger to avoid conflict with tensorboard logger
+        self.fl_logger = self.logger
+        self.logger = None
+
         self.init_lr = train_config["learning_rate"]
         self.max_steps = train_config["max_steps"]
         self.use_half_precision = train_config["use_half_precision"]
@@ -512,6 +521,16 @@ class BaseTrainerv2(object):
         # self.criterion = torch.nn.CrossEntropyLoss()
         self.criterion = WeightedFocalLoss(alpha=class_weights)
         self.gradient_accumulation_steps = 1
+
+    def log_info(self, fl_ctx, msg, fire_event=True):
+        # overload FLComponent log_info method to change logger name
+        log_msg = generate_log_message(fl_ctx, msg)
+        self.fl_logger.info(log_msg)
+        if fire_event:
+            self._fire_log_event(
+                event_type=EventType.INFO_LOG_AVAILABLE, log_tag=LogMessageTag.INFO, log_msg=log_msg, fl_ctx=fl_ctx
+            )
+        
 
     def configure_optimizer(self):
         optimizer_class = self.optimizer_dict.pop('class', None)
@@ -649,7 +668,7 @@ class BaseTrainerv2(object):
         }
         torch.save(ckpt, str(path))
 
-    def load_checkpoint(self, path: str, model: nn.Module) -> nn.Module:
+    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx) -> nn.Module:
         ckpt = torch.load(path)
 
         self.current_step = ckpt.get("global_steps", 0)
@@ -668,6 +687,7 @@ class BaseTrainerv2(object):
         device: str = "cuda:0",
         logger: Optional[SummaryWriter] = None,
         abort_signal: Optional[Any] = None,
+        fl_ctx = None
     ):
         self.setup(model, logger, abort_signal)
 
@@ -901,7 +921,7 @@ class FedBNTrainerv2(BaseTrainerv2):
         }
         torch.save(ckpt, str(path))
 
-    def load_checkpoint(self, path: str, model: nn.Module) -> nn.Module:
+    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx) -> nn.Module:
         ckpt = torch.load(path)
 
         self.current_step = ckpt.get("global_steps", 0)
@@ -943,6 +963,7 @@ class FedAttnTrainerv2(BaseTrainerv2):
         super().__init__(train_config, method, class_weights)
         self.attn_state = None
         self.interp_method = train_config['interp_method']
+
     def training_loop(self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"):
         target_step = self.current_step + num_steps
         avg_loss = 0.0
@@ -1027,20 +1048,6 @@ class FedAttnTrainerv2(BaseTrainerv2):
         if self.sch_state is not None:
             self.sch.load_state_dict(self.sch_state)
 
-    def setup(self, model, logger, abort_signal):
-        self.model = model
-        
-        if self.attn_state is not None:
-            self.model.load_state_dict(self.attn_state, strict=False)
-
-        self.logger = logger
-        if abort_signal is not None:
-            self.abort = abort_signal
-        else:
-            self.abort = None
-
-        self.configure_optimizer()
-
     def cleanup(self):
         # Save opt & sch states
         self.opt_state = deepcopy(self.opt.state_dict())
@@ -1070,14 +1077,18 @@ class FedAttnTrainerv2(BaseTrainerv2):
         ckpt = {
             "round": self.current_round,
             "global_steps": self.current_step,
-            "model": model.state_dict(),
+            "model": deepcopy(model.state_dict()),
             "optimizer": self.opt_state,
             "scheduler": self.sch_state,
             "attn_state": self.attn_state
         }
         torch.save(ckpt, str(path))
 
-    def load_checkpoint(self, path: str, model: nn.Module) -> nn.Module:
+    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx) -> nn.Module:
+        '''
+        Load_checkpoint is written with the learner.model object in mind.
+        It was originally only called to restore its weights from the checkpoint in the case of a crash.
+        '''
         ckpt = torch.load(path)
 
         self.current_step = ckpt.get("global_steps", 0)
@@ -1086,10 +1097,20 @@ class FedAttnTrainerv2(BaseTrainerv2):
         self.sch_state = ckpt.get("scheduler", None)
         self.attn_state = ckpt.get('attn_state', None)
 
-        model.load_state_dict(ckpt["model"])
+        self.log_info(
+            fl_ctx,
+            f"In load_checkpoint, we load weights {self.attn_state['stages.2.5.attn_last.fc2.bias']} to self.attn_state"
+        )
+        
+        # model.load_state_dict(ckpt["model"])
+        self.log_info(
+            fl_ctx,
+            f"In load_checkpoint, we get weights {model.state_dict()['stages.2.5.attn_last.fc2.bias']} from the model"
+        )
         # load attention parameters
         final_dict = {}
         if self.attn_state is not None:
+            self.log_info(fl_ctx, f'Round {self.current_round}: attn state is not none')
             if self.interp_method is None:
                 final_dict = deepcopy(self.attn_state)
             elif self.interp_method == 'linear':
@@ -1104,12 +1125,20 @@ class FedAttnTrainerv2(BaseTrainerv2):
                 else:
                     interp_ratio = 1
             elif self.interp_method == 'const':
+                self.log_info(fl_ctx, f'Round {self.current_round}: interp method is const')
                 interp_ratio = 0.5
 
             for k,v in self.attn_state.items():
-                final_dict[k] = v * interp_ratio + self.model.state_dict()[k] * (1 - interp_ratio)
-                    
-            self.model.load_state_dict(self.final_dict, strict=False)
+                shared_model_value = model.state_dict()[k]
+                final_dict[k] = v * interp_ratio + shared_model_value * (1 - interp_ratio)
+                
+                if k == 'stages.2.5.attn_last.fc2.bias':
+                    self.log_info(fl_ctx, f'Round {self.current_round}: for name = {k} \n values is {v} \n modelvalues is {shared_model_value}')
+                    self.log_info(fl_ctx, f'Round {self.current_round}: for name = {k} \n final_dict is {final_dict[k]}')
+            model.load_state_dict(final_dict, strict=False)
+
+        else:
+            self.log_info(fl_ctx, f'Round {self.current_round} attn state is none, loaded full model')
         return model
 
     def run(
@@ -1120,10 +1149,15 @@ class FedAttnTrainerv2(BaseTrainerv2):
         device: str = "cuda:0",
         logger: Optional[SummaryWriter] = None,
         abort_signal: Optional[Any] = None,
+        fl_ctx = None
     ):
         self.setup(model, logger, abort_signal)
+        # setup always executes before load checkpoint
+        # so local weights are always loaded
         if self.current_round > 0:
-            self.model = self.load_checkpoint("models/last.pt", self.model)
+            self.model = self.load_checkpoint("models/last.pt", model, fl_ctx)
+            # Experimental change, always load best client model
+            # self.model = self.load_checkpoint("models/best.pt", self.model)
         # Run training
         self.model.train()
         self.training_loop(data_loader, num_steps)
@@ -1245,7 +1279,7 @@ class FedPerTrainerv2(BaseTrainerv2):
         }
         torch.save(ckpt, str(path))
 
-    def load_checkpoint(self, path: str, model: nn.Module) -> nn.Module:
+    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx) -> nn.Module:
         ckpt = torch.load(path)
 
         self.current_step = ckpt.get("global_steps", 0)

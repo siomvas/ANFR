@@ -110,9 +110,11 @@ def main():
         server_config["workflows"][0]["name"] = "ScatterAndGather"
     
     if args.method == "fedattn":
-        server_config["components"][4]["args"]["exclude_vars"] = "attn|se"
+        # server_config["components"][4]["args"]["exclude_vars"] = "attn|se"
+        server_config["components"][4]["args"]["exclude_vars"] = ""
     elif args.method == "fedbn":
-        server_config["components"][4]["args"]["exclude_vars"] = "bn"
+        # server_config["components"][4]["args"]["exclude_vars"] = "bn"
+        server_config["components"][4]["args"]["exclude_vars"] = ""
     else:
         server_config["components"][4]["args"]["exclude_vars"] = ""
 

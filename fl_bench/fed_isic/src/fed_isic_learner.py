@@ -162,7 +162,7 @@ class FedISICLearner(Learner):
                     self.dm.train_dataloader,
                     num_steps=self.local_steps,
                     logger=self.writer,
-                    device=self.device
+                    device=self.device,
                 )
                 break
             except Exception as e:
@@ -170,7 +170,7 @@ class FedISICLearner(Learner):
                     self.log_warning(fl_ctx, f"Something wrong in training, retrying ({i+1}/{self.max_retry}).")
                     # Restore trainer states to the beginning of the round
                     if os.path.exists(self.last_model_path):
-                        self.trainer.load_checkpoint(self.last_model_path, self.model)
+                        self.trainer.load_checkpoint(self.last_model_path, self.model, fl_ctx)
                         load_weights(self.model, global_weights)
                         self.model = self.model.to(self.device)
                     # Reset dataset & dataloader
@@ -388,6 +388,10 @@ class FedISICLearner_v2(Learner):
             raise ValueError("No GPU detected")
 
         self.model = eval(config_train["model_name"] + f"({self.seed})").to(self.device)
+        self.log_warning(
+            fl_ctx,
+            f"Initial value for stages.2.5.attn_last.fc2.bias={self.model.state_dict()['stages.2.5.attn_last.fc2.bias']}"
+        )
         # self.model = torch.compile(self.model)
 
         if self.hyperion:
@@ -490,7 +494,8 @@ class FedISICLearner_v2(Learner):
                     self.dm.train_dataloader,
                     num_steps=self.local_steps,
                     logger=self.writer,
-                    device=self.device
+                    device=self.device,
+                    fl_ctx=fl_ctx
                 )
                 break
             except Exception as e:
@@ -498,7 +503,8 @@ class FedISICLearner_v2(Learner):
                     self.log_warning(fl_ctx, f"Something wrong in training, retrying ({i+1}/{self.max_retry}).")
                     # Restore trainer states to the beginning of the round
                     if os.path.exists(self.last_model_path):
-                        self.trainer.load_checkpoint(self.last_model_path, self.model)
+                        self.log_warning(fl_ctx, f"Loading last model from {self.last_model_path}")
+                        self.trainer.load_checkpoint(self.last_model_path, self.model, fl_ctx=fl_ctx)
                         load_weights(self.model, global_weights)
                         self.model = self.model.to(self.device)
                     # Reset dataset & dataloader
@@ -535,6 +541,11 @@ class FedISICLearner_v2(Learner):
             self.trainer.save_checkpoint(self.best_model_path, self.model)
         self.trainer.save_checkpoint(self.last_model_path, self.model)
 
+        self.log_info(
+            fl_ctx,
+            f"Now, after training, we call save_checkpoint with weights {self.model.state_dict()['stages.2.5.attn_last.fc2.bias']}"
+        )
+
         # Calculate weight diff
         local_weights = extract_weights(self.model)
         weight_diff = {}
@@ -543,6 +554,11 @@ class FedISICLearner_v2(Learner):
             if np.any(np.isnan(weight_diff[var_name])):
                 self.system_panic(f"{var_name} weights became NaN...", fl_ctx)
                 return make_reply(ReturnCode.EXECUTION_EXCEPTION)
+        
+        self.log_info(
+            fl_ctx,
+            f"The DXO contains the Diff {weight_diff['stages.2.5.attn_last.fc2.bias']}"
+        )
 
         # Create DXO and return
         dxo = DXO(
@@ -568,6 +584,11 @@ class FedISICLearner_v2(Learner):
         return dxo.to_shareable()
 
     def validate(self, data, fl_ctx, abort_signal):
+        '''
+        This gets called before the local training, and validates
+        the global model on the local dataset. In the process,
+        it load into this trainers self.model the global model weights.
+        '''
         # 1. Extract data from shareable
         model_owner = data.get_header(AppConstants.MODEL_OWNER, "global_model")
         validate_type = data.get_header(AppConstants.VALIDATE_TYPE)
@@ -595,9 +616,9 @@ class FedISICLearner_v2(Learner):
             self.log_exception(fl_ctx, f"DXO is of type {dxo.data_kind} but expected type WEIGHTS")
             return make_reply(ReturnCode.BAD_TASK_DATA)
         
-        if self.method != "fedinit" :
+        if self.method not in ("fedinit", "fedattn", "fedbn", "fedper"):
             load_weights(self.model, dxo.data)
-        else:
+        elif self.method == "fedinit":
             beta = 0.1
             # model: torch.nn.Module, weights: Dict[str, np.ndarray]
             # only necessary when running fewer threads than clients
@@ -617,6 +638,50 @@ class FedISICLearner_v2(Learner):
                     raise ValueError(f"Convert weight from {var_name} failed with error {str(e)}")
                 
             self.model.load_state_dict(local_var_dict)
+        elif self.method == "fedbn":
+            local_var_dict = self.model.state_dict() #prev round dict
+            model_keys = dxo.data.keys()
+            for var_name in local_var_dict:
+                if var_name in model_keys and "bn" not in var_name:
+                    wg = dxo.data[var_name]
+                try:
+                    local_var_dict[var_name] = torch.as_tensor(np.reshape(wg, local_var_dict[var_name].shape))
+                except Exception as e:
+                    raise ValueError(f"Convert weight from {var_name} failed with error {str(e)}")
+        elif self.method == "fedattn":
+            local_var_dict = self.model.state_dict() #prev round dict
+            self.log_info(
+                fl_ctx, 
+                f"Now in learner.validate: \
+                \n    Previous round weight is {local_var_dict['stages.2.5.attn_last.fc2.bias']} \
+                \n    Received weight is {dxo.data['stages.2.5.attn_last.fc2.bias']}"
+            )
+            model_keys = dxo.data.keys()
+
+            load_weights(self.model, dxo.data)
+            # a way to implement fedattn is to
+            # comment out the above line and instead  
+            # of overwriting the layers twice, first with the global model weights
+            # and then with the local model weights from the checkpoint,
+            # not overwriting them at all
+
+            # for var_name in local_var_dict:
+            #     if var_name in model_keys and "attn" not in var_name and "se" not in var_name:
+            #         wg = dxo.data[var_name]
+            #     try:
+            #         local_var_dict[var_name] = torch.as_tensor(np.reshape(wg, local_var_dict[var_name].shape))
+            #     except Exception as e:
+            #         raise ValueError(f"Convert weight from {var_name} failed with error {str(e)}")
+        elif self.method == 'fedper':
+            local_var_dict = self.model.state_dict()
+            model_keys = dxo.data.keys()
+            for var_name in self.model.state_dict():
+                if var_name in model_keys and 'head.fc' not in var_name:
+                    wg = dxo.data[var_name]
+                try:
+                    self.model.state_dict()[var_name] = torch.as_tensor(np.reshape(wg, self.model.state_dict()[var_name].shape))
+                except Exception as e:
+                    raise ValueError(f"Convert weight from {var_name} failed with error {str(e)}")
 
         # 4. Run validation
         self.model = self.model.to(self.device)
