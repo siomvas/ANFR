@@ -27,7 +27,7 @@
             "path": "fl_bench.fed_isic.src.fed_isic_learner.FedISICLearner_v2",
             "args": {
                 "config_train_name": "config_train.json",
-                "method": "fedattn",
+                "method": "scaffold",
                 "seed": 300,
                 "central": false,
                 "hyperion": false

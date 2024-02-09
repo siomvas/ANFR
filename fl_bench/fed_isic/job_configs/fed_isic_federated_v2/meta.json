@@ -1,5 +1,5 @@
 {
-    "name": "fed_isic_federated_v2_nfnet_l0_supervised_80_0.0005_200_fed_isic_fedattn",
+    "name": "fed_isic_federated_v2_eca_nfnet_l0_supervised_80_0.0005_200_fed_isic_scaffold",
     "deploy_map": {
         "fed_isic_federated_v2": [
             "@ALL"

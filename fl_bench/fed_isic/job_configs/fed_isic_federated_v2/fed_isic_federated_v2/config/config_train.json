@@ -3,7 +3,7 @@
     "fedprox_mu": 0.0,
     "batch_size": 64,
     "max_steps": 16000,
-    "model_name": "nfnet_l0_supervised",
+    "model_name": "eca_nfnet_l0_supervised",
     "optimizer_args": {
         "class": "Adam"
     },

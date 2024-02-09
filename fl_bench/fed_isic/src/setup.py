@@ -11,7 +11,7 @@ def main():
         "-method",
         type=str,
         default="fedavg",
-        choices=["central", "fedavg", "fedprox", "fedopt", "scaffold", "fedinit", "fedbn", "fedattn"],
+        choices=["central", "fedavg", "fedprox", "fedopt", "scaffold", "fedinit", "fedbn", "fedattn", "fedper"],
     )
     parser.add_argument("-model_name", type=str, default=argparse.SUPPRESS)
     parser.add_argument("-num_rounds", type=int, default=argparse.SUPPRESS)
@@ -109,7 +109,7 @@ def main():
         server_config["components"][4]["args"]["expected_data_kind"] = "WEIGHT_DIFF"
         server_config["workflows"][0]["name"] = "ScatterAndGather"
     
-    if args.method == "fedattn":
+    if args.method == "fedattn" or args.method == "fedper":
         # server_config["components"][4]["args"]["exclude_vars"] = "attn|se"
         server_config["components"][4]["args"]["exclude_vars"] = ""
     elif args.method == "fedbn":
