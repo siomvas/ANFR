@@ -2,6 +2,8 @@ import copy
 import torch
 from torch.optim import Optimizer
 import os
+from nvflare.app_opt.pt.fedproxloss import PTFedProxLoss
+
 
 def get_lr_values(optimizer: Optimizer):
     return [group["lr"] for group in optimizer.state_dict()["param_groups"]]
@@ -70,6 +72,7 @@ class AltScaffoldHelper(object):
             raise ValueError("c_delta_para hasn't been computed yet!")
         return self.c_delta_para
 
+
 class DittoHelper(object):
     def __init__(
         self, criterion, model, optimizer, device, app_dir: str, ditto_lambda: float = 0.1, model_epochs: int = 1
@@ -78,7 +81,7 @@ class DittoHelper(object):
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device
-    
+
         self.model_epochs = model_epochs
         self.prox_criterion = PTFedProxLoss(mu=ditto_lambda)
         self.epoch_global = 0
@@ -88,10 +91,9 @@ class DittoHelper(object):
         self.best_model_file_path = os.path.join(app_dir, "best_personalized_model.pt")
 
     def init(self, model, exclude_vars: list = []):
-        self.criterion = criterion
+        # self.criterion = criterion
         self.model = copy.deepcopy(model)
-        self.optimizer = optimizer
-
+        # self.optimizer = optimizer
 
     def load_model(self, global_weights):
         if os.path.exists(self.model_file_path):
@@ -121,7 +123,7 @@ class DittoHelper(object):
             self.best_metric = metric
             self.save_model(is_best=True)
 
-    def local_train(self, train_loader, model_global, abort_signal: Signal, writer):
+    def local_train(self, train_loader, model_global, abort_signal, writer):
         for epoch in range(self.model_epochs):
             self.model.train()
             epoch_len = len(train_loader)
