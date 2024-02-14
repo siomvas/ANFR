@@ -1,7 +1,7 @@
 import argparse
 import os
 import json
-from fl_bench.fed_isic.src.utils import read_json, write_json
+from fl_bench.utils.misc import read_json, write_json
 
 
 def main():

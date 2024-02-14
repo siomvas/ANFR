@@ -19,7 +19,7 @@ from prettytable import PrettyTable
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from .FedIsicDM import FedIsicDataModule
-from .utils import load_weights, extract_weights, seed_everything
+from fl_bench.utils.misc import load_weights, extract_weights, seed_everything
 from .validator import Validator
 from fl_bench.networks.fed_isic_nets import *
 

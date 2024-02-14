@@ -104,7 +104,7 @@ class GlobalMetricLogger(Widget):
 
         val_metric = dxo.get_meta_prop(self.val_metric_name)
         if val_metric is None:
-            self.log_debug(fl_ctx, f"Metric {self.val_metric_name} does not exists.")
+            self.log_debug(fl_ctx, f"Metric {self.val_metric_name} does not exist.")
             return
         else:
             self.log_info(fl_ctx, f"Received validation metric {val_metric} from {client_name}.")

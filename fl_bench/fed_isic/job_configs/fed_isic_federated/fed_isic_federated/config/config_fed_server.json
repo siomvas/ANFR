@@ -80,7 +80,7 @@
         },
         {
             "id": "model_locator",
-            "path": "fl_bench.fed_isic.src.model_locator.SimpleModelLocator",
+            "path": "fl_bench.utils.model_locator.SimpleModelLocator",
             "args": {}
         },
         {
@@ -90,12 +90,12 @@
         },
         {
             "id": "formatter",
-            "path": "fl_bench.fed_isic.src.simple_formatter.SimpleFormatter",
+            "path": "fl_bench.utils.simple_formatter.SimpleFormatter",
             "args": {}
         },
         {
             "id": "report_generator",
-            "path": "fl_bench.fed_isic.src.report_generator.ReportGenerator",
+            "path": "fl_bench.utils.report_generator.ReportGenerator",
             "args": {}
         }
     ],
