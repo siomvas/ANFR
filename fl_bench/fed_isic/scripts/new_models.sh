@@ -41,6 +41,7 @@ for model_name in caformer_supervised; do
     --opt_args '{"class": "Adam"}' \
     --use_hyperion_dirs \
     --amp \
+    
     nvflare simulator ${target_config} -w ${RESULT_ROOT}/${name} -n 6 -gpu ${gpu}
 
 done
