@@ -7,12 +7,7 @@ from fl_bench.utils.misc import read_json, write_json
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-job", type=str, help="Path to job config.")
-    parser.add_argument(
-        "-method",
-        type=str,
-        default="fedavg",
-        choices=["central", "fedavg", "fedprox", "fedopt", "scaffold", "fedinit", "fedbn", "fedattn", "fedper"],
-    )
+    parser.add_argument("-method", type=str, default="fedavg")
     parser.add_argument("-model_name", type=str, default=argparse.SUPPRESS)
     parser.add_argument("-num_rounds", type=int, default=argparse.SUPPRESS)
     parser.add_argument("-local_steps", type=int, default=argparse.SUPPRESS)
@@ -20,11 +15,17 @@ def main():
     parser.add_argument(
         "--opt_args", type=str, default=argparse.SUPPRESS, help="optimizer arguments, pass as 'k:v, k:v'"
     )
+    parser.add_argument("--scheduler", type=str, default="onecycle", choices=["none", "warmcosine", "cosine", "onecycle"])
+    parser.add_argument("--steps_or_epochs", type=str, default="steps", choices=["steps", "epochs"])
     parser.add_argument("-seed", type=int, default=222)
+    parser.add_argument("--optim_resume", type=str, default="restart", choices=["restart", "resume"])
+    parser.add_argument("--fedprox_mu", type=float, default=0.0)
+    parser.add_argument("--grad_clipping_type", type=str, default="norm", choices=["none", "norm", "value"])
+    parser.add_argument("--grad_clipping_value", type=float, default=1.0)
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--use_hyperion_dirs", action="store_true")
     parser.add_argument("--interp_method", type=str, default="", choices=["", "linear", "inverse_linear", "fixbn", "const"])
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=64)
 
     args = parser.parse_args()
 
@@ -61,10 +62,6 @@ def main():
     # update max steps
     print(f"Setting max steps = {args.num_rounds * args.local_steps}")
     train_config["max_steps"] = args.num_rounds * args.local_steps
-
-    # update interp method
-    print(f"Setting interp method = {args.interp_method}")
-    train_config["interp_method"] = args.interp_method
 
     # update method
     # convert central to fedavg for config
@@ -108,7 +105,7 @@ def main():
         server_config["task_result_filters"] = []
         server_config["components"][4]["args"]["expected_data_kind"] = "WEIGHT_DIFF"
         server_config["workflows"][0]["name"] = "ScatterAndGather"
-    
+
     if args.method == "fedattn" or args.method == "fedper":
         # server_config["components"][4]["args"]["exclude_vars"] = "attn|se"
         server_config["components"][4]["args"]["exclude_vars"] = ""
@@ -149,10 +146,17 @@ def main():
     write_json(client_config, client_config_filename)
     print(f"Setting hyperion = {args.use_hyperion_dirs}")
 
-    train_config = read_json(train_config_filename)
-    train_config["batch_size"] = args.batch_size
-    write_json(train_config, train_config_filename)
-    print(f"Setting batch_size = {args.batch_size}")
+    misc_optional_args = [
+        "scheduler", "optim_resume", "batch_size", "interp_method",
+        "cache_rate", "fedprox_mu", "grad_clipping_type",
+        "grad_clipping_value", "steps_or_epochs"
+    ]
+    for arg in misc_optional_args:
+        if arg in args:
+            train_config = read_json(train_config_filename)
+            train_config[arg] = getattr(args, arg)
+            write_json(train_config, train_config_filename)
+            print(f"Setting {arg} = {getattr(args, arg)}")
 
 
 if __name__ == "__main__":

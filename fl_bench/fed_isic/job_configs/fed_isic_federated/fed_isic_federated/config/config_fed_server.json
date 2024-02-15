@@ -2,14 +2,30 @@
     "format_version": 2,
     "min_clients": 6,
     "num_rounds": 80,
-    "seed": 600,
-    "hyperion": true,
-    "model_path": "fl_bench.networks.fed_isic_nets.MyEfficientNet_supervised",
+    "seed": 300,
+    "hyperion": false,
+    "model_path": "fl_bench.networks.fed_isic_nets.eca_nfnet_l0_supervised",
     "server": {
         "heart_beat_timeout": 600
     },
     "task_data_filters": [],
-    "task_result_filters": [],
+    "task_result_filters": [
+        {
+            "tasks": [
+                "train",
+                "submit_model",
+                "validate"
+            ],
+            "filters": [
+                {
+                    "name": "ExcludeVars",
+                    "args": {
+                        "exclude_vars": "(?:num_batches_tracked)|(?:attn.relative_position_index)"
+                    }
+                }
+            ]
+        }
+    ],
     "components": [
         {
             "id": "persistor",
@@ -59,13 +75,16 @@
             "id": "aggregator",
             "name": "InTimeAccumulateWeightedAggregator",
             "args": {
-                "expected_data_kind": "WEIGHT_DIFF",
-                "exclude_vars": "bn"
+                "expected_data_kind": {
+                    "_model_weights_": "WEIGHT_DIFF",
+                    "scaffold_c_diff": "WEIGHT_DIFF"
+                },
+                "exclude_vars": ""
             }
         },
         {
             "id": "metric_logger",
-            "path": "fl_bench.fed_isic.src.metric_logger.GlobalMetricLogger",
+            "path": "fl_bench.utils.metric_logger.GlobalMetricLogger",
             "args": {
                 "log_dir": "logs",
                 "log_name": "accuracy"
@@ -102,7 +121,7 @@
     "workflows": [
         {
             "id": "scatter_and_gather",
-            "name": "ScatterAndGather",
+            "name": "ScatterAndGatherScaffold",
             "args": {
                 "min_clients": "{min_clients}",
                 "num_rounds": "{num_rounds}",

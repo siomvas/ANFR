@@ -27,10 +27,10 @@
             "path": "fl_bench.fed_isic.src.fed_isic_learner.FedISICLearner",
             "args": {
                 "config_train_name": "config_train.json",
-                "method": "fedbn",
-                "seed": 600,
+                "method": "scaffold",
+                "seed": 300,
                 "central": false,
-                "hyperion": true
+                "hyperion": false
             }
         }
     ]
