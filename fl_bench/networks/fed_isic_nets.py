@@ -6,7 +6,7 @@ import torchvision.models as tm
 from timm.models.vision_transformer import VisionTransformer, _cfg
 from timm.layers import BatchNormAct2d, LayerNormAct2d, LayerNorm2d
 
-from fl_bench.fed_isic.src.utils import seed_everything
+from fl_bench.utils.misc import seed_everything
 from functools import partial
 
 
