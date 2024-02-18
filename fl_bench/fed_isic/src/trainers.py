@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 from fl_bench.utils.AltScaffoldHelper import AltScaffoldHelper, get_lr_values
 from .utils import WeightedFocalLoss
-from fl_bench.prostate_2d.utils import AGC
+from fl_bench.prostate_2d.src.utils import AGC
 from .validator import Validator
 
 

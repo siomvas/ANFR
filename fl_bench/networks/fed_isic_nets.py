@@ -115,6 +115,7 @@ def resnet_50_pretrained_ssl(seed):
 
     return model
 
+
 resnet_50_ssl = resnet_50_pretrained_ssl
 
 
@@ -122,7 +123,7 @@ def resnet_50_pretrained_timm(seed):
     seed_everything(seed)
     os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
-        'resnet50.a1_in1k',
+        'resnet50.ra_in1k',
         pretrained=True,
         num_classes=NUM_CLASSES)
     os.environ['https_proxy'] = ''
@@ -408,6 +409,7 @@ def nf_resnet50(seed):
     )
     return model
 
+
 nf_resnet50_scratch = nf_resnet50
 
 
@@ -422,7 +424,9 @@ def nf_resnet50_pretrained(seed):
     os.environ['https_proxy'] = ''
     return model
 
+
 nf_resnet50_supervised = nf_resnet50_pretrained
+
 
 def nf_resnet50_pretrained_ssl(seed):
     seed_everything(seed)

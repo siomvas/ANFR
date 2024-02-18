@@ -2,9 +2,9 @@
     "format_version": 2,
     "min_clients": 6,
     "num_rounds": 80,
-    "seed": 300,
-    "hyperion": false,
-    "model_path": "fl_bench.networks.fed_isic_nets.eca_nfnet_l0_supervised",
+    "seed": 24,
+    "hyperion": true,
+    "model_path": "fl_bench.networks.fed_isic_nets.seresnet_50_supervised",
     "server": {
         "heart_beat_timeout": 600
     },

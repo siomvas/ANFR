@@ -7,7 +7,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
-from fl_bench.fed_isic.src.utils import seed_everything
+from fl_bench.utils.misc import seed_everything
 
 
 def seed_worker(worker_id):
