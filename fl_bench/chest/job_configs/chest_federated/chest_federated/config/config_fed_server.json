@@ -1,15 +1,28 @@
 {
     "format_version": 2,
-    "min_clients": 6,
+    "min_clients": 4,
+    "dataset": "CXR14",
     "num_rounds": 150,
     "seed": 2024,
     "model_path": "fl_bench.networks.chest_nets.unet_resnet50_dbn_pretrained",
+    "TRAIN_SPLIT_ROOT": "datalists",
     "server": {
         "heart_beat_timeout": 600
     },
     "task_data_filters": [],
     "task_result_filters": [],
     "components": [
+        {
+            "id": "data_splitter",
+            "path": "fl_bench.chest.src.dm.ChestSplitter",
+            "args": {
+                "dataset": "{dataset}",
+                "split_dir": "{TRAIN_SPLIT_ROOT}",
+                "num_sites": "{min_clients}",
+                "seed": "{seed}",
+                "hyperion": "{hyperion}"
+            }
+        },
         {
             "id": "persistor",
             "name": "PTFileModelPersistor",
@@ -40,7 +53,7 @@
                     "path": "torch.optim.SGD",
                     "args": {
                         "lr": 1.0,
-                        "momentum": 0.6
+                        "momentum": 0.9
                     },
                     "config_type": "dict"
                 },
@@ -48,7 +61,7 @@
                     "path": "torch.optim.lr_scheduler.CosineAnnealingLR",
                     "args": {
                         "T_max": "{num_rounds}",
-                        "eta_min": 0.9
+                        "eta_min": 0.5
                     },
                     "config_type": "dict"
                 }
@@ -67,7 +80,7 @@
             "path": "fl_bench.utils.metric_logger.GlobalMetricLogger",
             "args": {
                 "log_dir": "logs",
-                "log_name": "accuracy"
+                "log_name": "val_mean_auroc"
             }
         },
         {

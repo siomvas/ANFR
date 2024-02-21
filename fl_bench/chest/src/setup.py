@@ -20,6 +20,7 @@ def main():
     parser.add_argument("-seed", type=int, default=222)
     parser.add_argument("--optim_resume", type=str, default="restart", choices=["restart", "resume"])
     parser.add_argument("--cache_rate", type=float, default=1.0)
+    parser.add_argument("--dataset", type=str, default="CXR14", choices=["CXR14", "CXP", "COMBO"])
     parser.add_argument("--fedprox_mu", type=float, default=0.0)
     parser.add_argument("--grad_clipping_type", type=str, default="norm", choices=["none", "norm", "value"])
     parser.add_argument("--grad_clipping_value", type=float, default=1.0)
@@ -40,6 +41,11 @@ def main():
     server_config = read_json(server_config_filename)
     train_config = read_json(train_config_filename)
     meta_config = read_json(meta_config_filename)
+
+    # update dataset
+    print(f"Setting dataset = {args.dataset}")
+    server_config["dataset"] = args.dataset
+    train_config["dataset"] = args.dataset
 
     # update model
     print(f"Setting model name = {args.model_name}")
@@ -68,6 +74,9 @@ def main():
     # convert central to fedavg for config
     if args.method == "central":
         args.method = "fedavg"
+
+    if args.method != "fedprox":
+        train_config["fedprox_mu"] = 0.0
 
     print(f"Setting method = {args.method}")
     client_config["components"][0]["args"]["method"] = args.method

@@ -1,5 +1,3 @@
-
-import copy
 import json
 import os
 import traceback
@@ -12,17 +10,17 @@ from nvflare.apis.fl_constant import FLContextKey
 from nvflare.apis.fl_context import FLContext
 from nvflare.apis.shareable import ReturnCode, Shareable, make_reply
 from nvflare.app_common.abstract.learner_spec import Learner
-from nvflare.app_common.app_constant import (AlgorithmConstants,
-                                             AppConstants, ModelName,
-                                             ValidateType)
+from nvflare.app_common.app_constant import (AlgorithmConstants, AppConstants,
+                                             ModelName, ValidateType)
+from prettytable import PrettyTable
 from torch.utils.tensorboard.writer import SummaryWriter
 
-from .dm import ChestXRay14DataModule
-from prettytable import PrettyTable
-from fl_bench.utils.misc import load_weights, extract_weights, seed_everything
-from .validator import Validator
 from fl_bench.networks.chest_nets import *
+from fl_bench.utils.misc import extract_weights, load_weights, seed_everything
+
+from .dm import ChestDataModule
 from .trainers import get_trainer
+from .validator import Validator
 
 
 class ChestLearner(Learner):
@@ -47,14 +45,6 @@ class ChestLearner(Learner):
         self.submit_model_task_name = submit_model_task_name
         self.hyperion = hyperion
 
-        # self.best_metric = 0.0
-        # # Epoch counter
-        # self.epoch_of_start_time = 0
-        # self.epoch_global = 0
-        # # FedProx related
-        # self.fedproxloss_mu = 0.0
-        # self.criterion_prox = None
-
     def initialize(self, parts, fl_ctx):
 
         seed_everything(self.seed)
@@ -74,12 +64,12 @@ class ChestLearner(Learner):
         ).to(self.device)
 
         if self.hyperion:
-            data_dir = os.getenv("HYPERION_CHESTXRAY14_ROOT")
+            data_dir = os.getenv(f"HYPERION_{config_train['dataset']}_ROOT")
         else:
-            data_dir = os.getenv("CHESTXRAY14_ROOT")
+            data_dir = os.getenv(f"{config_train['dataset']}_ROOT")
 
-        self.dm = ChestXRay14DataModule(
-            data_dir,
+        self.dm = ChestDataModule(
+            data_dir=data_dir,
             client_idx=fl_ctx.get_identity_name(),
             central=self.central,
             batch_size=config_train["batch_size"],
@@ -87,21 +77,32 @@ class ChestLearner(Learner):
             seed=self.seed,
         )
 
+        num_classes = {"CXR14": 15, "CXP": 14, "COMBO": 7}[config_train["dataset"]]
+        weights = np.zeros(num_classes)
+        for x in self.dm.train_dataset:
+            weights += x["label"].numpy()
+        N = len(self.dm.train_dataset)
+        class_weights = []
+        for i in range(num_classes):
+            class_weights.append((N - weights[i])/(weights[i]+1e-6))
+        self.class_weights = torch.FloatTensor(class_weights).to(self.device)
+        print("Class weights extract from training dataset applied to loss function:", self.class_weights)
+
         self.local_steps = config_train["local_steps"]
         self.key_metric = "mean_auroc"
         self.best_metric = 0.0
         self.best_model_path = "models/best_model.pt"
         self.last_model_path = "models/last.pt"
         self.trainer = (
-            get_trainer(self.method, config_train, model=self.model)
+            get_trainer(self.method, config_train, self.class_weights, model=self.model)
             if self.method == "scaffold"
-            else get_trainer(self.method, config_train)
+            else get_trainer(self.method, config_train, self.class_weights)
         )
         self.validator = Validator()
 
     def train(self, data, fl_ctx, abort_signal) -> Shareable:
 
-        # get round information
+        #  get round information
         current_round = data.get_header(AppConstants.CURRENT_ROUND)
         num_rounds = data.get_header(AppConstants.NUM_ROUNDS)
         self.log_info(fl_ctx, f"Current/Total Round: {current_round + 1}/{num_rounds}")
@@ -138,14 +139,6 @@ class ChestLearner(Learner):
         # NB load_weights(self.model, dxo.data) loads the weights into the model during validation
         # as the sequence is validate, train, validate, train, ...
 
-        # FedProx related
-        if self.method == "fedprox":
-            model_global = copy.deepcopy(self.model)
-            for param in model_global.parameters():
-                param.requires_grad = False
-        else:
-            model_global = None
-
         # Run training
         for i in range(self.max_retry + 1):
             try:
@@ -176,7 +169,11 @@ class ChestLearner(Learner):
         # Run post-training validation
         for i in range(self.max_retry + 1):
             try:
-                metrics = self.validator.run(self.model, self.dm.val_dataloader)
+                # pass reference to writer so we can add the pr curve
+                metrics = self.validator.run(
+                    self.model, self.dm.val_dataloader, 
+                    logger=self.writer, step=self.trainer.current_step
+                )
                 break
             except Exception as e:
                 if i < self.max_retry:
@@ -192,7 +189,7 @@ class ChestLearner(Learner):
         table.field_names = ["Metric", "Value"]
         for m, v in metrics.items():
             table.add_row([m, v])
-            self.writer.add_scalar("Dice/Post-Train Mean AUROC", v, self.trainer.current_step)
+            self.writer.add_scalar(f"{m}/Post-Train Val {m}", v, self.trainer.current_step)
         self.log_info(fl_ctx, str(table))
 
         # Save checkpoint if necessary

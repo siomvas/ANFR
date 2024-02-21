@@ -4,6 +4,7 @@
     "cache_dataset": 1.0,
     "batch_size": 1,
     "max_steps": 150,
+    "dataset": "CXR14",
     "scheduler": "none",
     "model_name": "unet_resnet50_dbn_pretrained",
     "optimizer_args": {

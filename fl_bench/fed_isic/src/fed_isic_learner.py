@@ -11,17 +11,17 @@ from nvflare.apis.fl_constant import FLContextKey
 from nvflare.apis.fl_context import FLContext
 from nvflare.apis.shareable import ReturnCode, Shareable, make_reply
 from nvflare.app_common.abstract.learner_spec import Learner
-from nvflare.app_common.app_constant import (AlgorithmConstants,
-                                             AppConstants, ModelName,
-                                             ValidateType)
+from nvflare.app_common.app_constant import (AlgorithmConstants, AppConstants,
+                                             ModelName, ValidateType)
 from prettytable import PrettyTable
 from torch.utils.tensorboard.writer import SummaryWriter
 
-from .FedIsicDM import FedIsicDataModule
-from fl_bench.utils.misc import load_weights, extract_weights, seed_everything
-from .validator import Validator
 from fl_bench.networks.fed_isic_nets import *
+from fl_bench.utils.misc import extract_weights, load_weights, seed_everything
+
+from .FedIsicDM import FedIsicDataModule
 from .trainers import get_trainer
+from .validator import Validator
 
 
 class FedISICLearner(Learner):
@@ -103,7 +103,7 @@ class FedISICLearner(Learner):
 
     def train(self, data, fl_ctx, abort_signal) -> Shareable:
 
-        # get round information
+        #  get round information
         current_round = data.get_header(AppConstants.CURRENT_ROUND)
         num_rounds = data.get_header(AppConstants.NUM_ROUNDS)
         self.log_info(fl_ctx, f"Current/Total Round: {current_round + 1}/{num_rounds}")
@@ -139,14 +139,6 @@ class FedISICLearner(Learner):
 
         # NB load_weights(self.model, dxo.data) loads the weights into the model during validation
         # as the sequence is validate, train, validate, train, ...
-
-        # FedProx related
-        if self.method == "fedprox":
-            model_global = copy.deepcopy(self.model)
-            for param in model_global.parameters():
-                param.requires_grad = False
-        else:
-            model_global = None
 
         # Run training
         for i in range(self.max_retry + 1):

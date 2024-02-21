@@ -1,79 +1,31 @@
-
 from copy import deepcopy
 from pathlib import Path, PurePath
-from typing import Any, Dict, Optional, List
-
-from nvflare.apis.fl_constant import ReturnCode
-from nvflare.apis.shareable import make_reply
-from nvflare.apis.signal import Signal
-from nvflare.app_opt.pt.fedproxloss import PTFedProxLoss
-from nvflare.apis.fl_component import FLComponent
-from nvflare.apis.utils.fl_context_utils import generate_log_message
-from nvflare.apis.event_type import EventType
-from nvflare.apis.fl_constant import LogMessageTag
+from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn as nn
+from lightly.utils.scheduler import CosineWarmupScheduler
+from nvflare.apis.event_type import EventType
+from nvflare.apis.fl_component import FLComponent
+from nvflare.apis.fl_constant import LogMessageTag
+from nvflare.apis.utils.fl_context_utils import generate_log_message
+from nvflare.app_opt.pt.fedproxloss import PTFedProxLoss
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
-
 from tqdm import tqdm
 
-from fl_bench.utils.AltScaffoldHelper import AltScaffoldHelper, DittoHelper, get_lr_values
-from lightly.utils.scheduler import CosineWarmupScheduler
-from .utils import AGC
+from fl_bench.prostate_2d.src.utils import AGC
+from fl_bench.utils.AltScaffoldHelper import (AltScaffoldHelper, DittoHelper,
+                                              get_lr_values)
+
+from .utils import FocalLoss
 from .validator import Validator
 
-__all__ = ["BaseProstate2DTrainer", "PartPrivate2DTrainer", 
-           "ScaffoldProstate2DTrainer", "DittoProstate2DTrainer"]
 
+class BaseTrainer(FLComponent):
 
-class BaseProstate2DTrainer(FLComponent):
-    """
-    Base class for trainers for the 2-D prostate dataset.
-
-    Args:
-        train_config (Dict): Configuration parameters for training.
-        model (Optional[nn.Module]): A reference to the learner's model.
-
-    Attributes:
-        fl_logger: The logger for federated learning.
-        logger: The logger for training.
-        init_lr: The initial learning rate.
-        max_steps: The maximum number of training steps.
-        use_half_precision: Flag indicating whether to use half precision.
-        scaler: The gradient scaler for mixed precision training.
-        optimizer_dict: The dictionary of optimizer arguments.
-        scheduler: The scheduler for the optimizer.
-        grad_clipping_type: The type of gradient clipping.
-        grad_clipping_value: The value for gradient clipping.
-        current_step: The current training step.
-        current_round: The current training round.
-        opt: The optimizer.
-        opt_state: The optimizer state.
-        sch: The scheduler.
-        sch_state: The scheduler state.
-        fedprox_mu: The mu parameter for FedProx.
-        criterion_prox: The criterion for FedProx.
-        validator: The validator for evaluating the model.
-        criterion: The loss criterion.
-        gradient_accumulation_steps: The number of gradient accumulation steps.
-
-    Methods:
-        log_info: Logs an information message.
-        configure_optimizer: Configures the optimizer.
-        get_batch: Retrieves a batch of data from the data loader.
-        training_loop: Performs the training loop.
-        setup: Sets up the trainer.
-        cleanup: Cleans up the trainer.
-        save_checkpoint: Saves a checkpoint of the model and optimizer.
-        load_checkpoint: Loads a checkpoint of the model and optimizer.
-        run: Runs the training process.
-
-    """
-
-    def __init__(self, config, model=None):
+    def __init__(self, config, class_weights, model=None):
         super().__init__()
 
         # rename FL logger to avoid conflict with tensorboard logger
@@ -102,8 +54,10 @@ class BaseProstate2DTrainer(FLComponent):
         self.use_half_precision = config["use_half_precision"]
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_half_precision)
 
-        self.criterion = torch.nn.BCELoss()
-        # other options?
+        self.criterion = {
+            "bce": torch.nn.BCEWithLogitsLoss(weight=class_weights),
+            "fl": FocalLoss(weight=class_weights, gamma=2.0),
+        }[config["criterion"]]
 
         self.fedprox_mu = config["fedprox_mu"]
         self.criterion_prox = None
@@ -123,7 +77,6 @@ class BaseProstate2DTrainer(FLComponent):
 
     def configure_optimizer(self):
 
-        # Configure optimizer
         optimizer_class = self.optimizer_dict.pop('class', None)
         self.opt = eval(f'torch.optim.{optimizer_class}')(
             self.model.parameters(),
@@ -139,7 +92,7 @@ class BaseProstate2DTrainer(FLComponent):
                            )
 
         # Load optimizer state
-        if (self.opt_state is not None) and (self.optim_resume=="resume"):
+        if (self.opt_state is not None) and (self.optim_resume == "resume"):
             self.opt.load_state_dict(self.opt_state)
 
         # Configure scheduler
@@ -213,7 +166,7 @@ class BaseProstate2DTrainer(FLComponent):
                         loss = loss + self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
 
                 # Backward
-                self.opt.zero_grad(set_to_none=True)
+                self.opt.zero_grad()
                 self.scaler.scale(loss).backward()
 
                 #  Gradient accumulation
@@ -255,19 +208,21 @@ class BaseProstate2DTrainer(FLComponent):
             )
             # Measure post-train train metric every 5 rounds starting from the 5th round
             if self.current_round % 5 == 0 and self.current_round > 4:
-                post_train_acc = next(iter(self.validator.run(self.model, data_loader).values()))
-                self.logger.add_scalar(
-                    "Dice/Post-Train Train MAUROC",
-                    post_train_acc,
-                    self.current_step / self.gradient_accumulation_steps
-                )
+                post_train_metrics = self.validator.run(self.model, data_loader)
+                for k, v in post_train_metrics.items():
+                    self.logger.add_scalar(
+                        f"Post-Train Train {k}",
+                        v,
+                        self.current_step / self.gradient_accumulation_steps
+                    )
 
     def setup(self, model, logger, data_loader, num_steps, abort_signal):
 
         self.model = model
 
         # global model setup for aux losses
-        self.global_model = deepcopy(model).eval()
+        if self.fedprox_mu > 0:
+            self.global_model = deepcopy(model).eval()
 
         self.logger = logger
         if abort_signal is not None:
@@ -345,7 +300,7 @@ class BaseProstate2DTrainer(FLComponent):
         self.cleanup()
 
 
-class PartPrivate2DTrainer(BaseProstate2DTrainer):
+class PartPrivateTrainer(BaseTrainer):
     """This class is used to train FL models while keeping part of the model private.
     If the private part is bn layers, the model will be trained with FedBN.
     If the private part is attention layers, the model will be trained with FedAttn.
@@ -364,12 +319,12 @@ class PartPrivate2DTrainer(BaseProstate2DTrainer):
 
     def cleanup(self):
 
-        self.opt_state = deepcopy(self.opt.state_dict())
+        self.opt_state = deepcopy(self.opt.state_dict()) if self.optim_resume == "resume" else None
         self.sch_state = deepcopy(self.sch.state_dict())
 
         self.private_layers_state = {}
         # head.fc for fedper, bn for fedbn, attn for fedattn
-        for k,v in self.model.state_dict().items():
+        for k, v in self.model.state_dict().items():
             if any(subname in k for subname in self.private_layers):
                 self.private_layer_state[k] = deepcopy(v)
         # Cleanup opt, sch & models
@@ -434,7 +389,7 @@ class PartPrivate2DTrainer(BaseProstate2DTrainer):
 
         return model
 
-    def run(self, model, data_loader, num_steps, device= "cuda:0", logger=None,
+    def run(self, model, data_loader, num_steps, device="cuda:0", logger=None,
         abort_signal=None, fl_ctx=None):
         self.setup(model, logger, abort_signal)
         # different from base trainer,
@@ -448,15 +403,69 @@ class PartPrivate2DTrainer(BaseProstate2DTrainer):
         self.cleanup()
 
 
-class ScaffoldProstate2DTrainer(BaseProstate2DTrainer):
+class ScaffoldTrainer(BaseTrainer):
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.scaffold_helper = AltScaffoldHelper()        
+    def __init__(self, config, class_weights):
+        super().__init__(config, class_weights)
+        self.scaffold_helper = AltScaffoldHelper()
+
+    def setup(self, model, logger, data_loader, num_steps, abort_signal):
+
+        self.model = model
+        self.global_model = deepcopy(model).eval()
+        self.logger = logger
+        if abort_signal is not None:
+            self.abort = abort_signal
+        else:
+            self.abort = None
+
+        if self.steps_or_epochs == "epochs":
+            self.max_steps = len(data_loader) * num_steps
+
+        self.configure_optimizer()
+
+    def save_checkpoint(self, path: str, model: nn.Module) -> None:
+
+        path = PurePath(path)
+        Path(path.parent).mkdir(parents=True, exist_ok=True)
+
+        ckpt = {
+            "round": self.current_round,
+            "global_steps": self.current_step,
+            "model": model.state_dict(),
+            "optimizer": self.opt_state,
+            "scheduler": self.sch_state,
+            "c_global": self.scaffold_helper.c_global.state_dict(),
+            "c_local": self.scaffold_helper.c_local.state_dict()
+        }
+        torch.save(ckpt, str(path))
+
+    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx=None) -> nn.Module:
+
+        ckpt = torch.load(path)
+
+        self.current_step = ckpt.get("global_steps", 0)
+        self.current_round = ckpt.get("round", 0)
+        self.opt_state = ckpt.get("optimizer", None)
+        self.sch_state = ckpt.get("scheduler", None)
+        self.scaffold_helper.c_global = ckpt.get("c_global", None)
+        self.scaffold_helper.c_local = ckpt.get("c_local", None)
+
+        model.load_state_dict(ckpt["model"])
+        return model
 
     def training_loop(self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"):
+
+        # if steps_or_epochs is epochs, num_steps given to training_loop
+        # is the number of epochs, otherwise it is the number of steps
+        # the rest of training_loop treats num_steps as actual number of steps
+        # so convert num_steps to the number of steps if necessary
+        if self.steps_or_epochs == "epochs":
+            num_steps = len(data_loader)
         target_step = self.current_step + num_steps
         avg_loss = 0.0
+        c_global_para, c_local_para = self.scaffold_helper.get_params()
+
         with tqdm(total=num_steps, dynamic_ncols=True) as pbar:
             # Configure progress bar
             pbar.set_description(f"Round {self.current_round}")
@@ -469,11 +478,11 @@ class ScaffoldProstate2DTrainer(BaseProstate2DTrainer):
                     preds = self.model(image)
                     loss = self.criterion(preds, label) / self.gradient_accumulation_steps
                     if self.criterion_prox is not None:
-                        loss = loss+ self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
+                        loss = loss + self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
 
                 # Backward
                 self.opt.zero_grad(set_to_none=True)
-                self.scaler.scale(loss).backward()                
+                self.scaler.scale(loss).backward()
 
                 #  Gradient accumulation
                 if (i + 1) % self.gradient_accumulation_steps == 0:
@@ -531,124 +540,26 @@ class ScaffoldProstate2DTrainer(BaseProstate2DTrainer):
             )
             # Measure post-train train metric every 5 rounds starting from the 5th round
             if self.current_round % 5 == 0 and self.current_round > 4:
-                post_train_acc = next(iter(self.validator.run(self.model, data_loader).values()))
-                self.logger.add_scalar(
-                    "Dice/Post-Train Train MAUROC",
-                    post_train_acc,
-                    self.current_step / self.gradient_accumulation_steps
-                )
+                post_train_metrics = self.validator.run(self.model, data_loader)
+                for k, v in post_train_metrics.items():
+                    self.logger.add_scalar(
+                        f"Post-Train Train {k}",
+                        v,
+                        self.current_step / self.gradient_accumulation_steps
+                    )
 
 
-class DittoProstate2DTrainer(BaseProstate2DTrainer):
-
-    def __init__(self, config, ditto_lambda, ditto_model_epochs=1):
-        super().__init__(config)
-
-        self.ditto_lambda = ditto_lambda
-        self.dittp_model_epochs = model_epochs
-        ditto_model = eval(self.model_arch + "()").to(self.device)
-        ditto_optimizer = optim.Adam(
-            ditto_model.parameters(), lr=config["ditto_learning_rate"])
-        self.ditto_helper = DittoHelper()
-
-
-# class SupervisedMonaiProstateDittoLearner():
-
-#     def train_config(self, fl_ctx):
-
-
-#         self.ditto_helper = SupervisedPTDittoHelper(
-#             criterion=DiceLoss(sigmoid=True),
-#             model=ditto_model,
-#             optimizer=ditto_optimizer,
-#             device=self.device,
-#             app_dir=app_dir,
-#             ditto_lambda=self.config_info["ditto_lambda"],
-#             model_epochs=self.ditto_model_epochs,
-#         )
-
-#     def train(self, shareable: Shareable, fl_ctx: FLContext, abort_signal: Signal,):
-
-#         # update local model weights with received weights
-#         dxo = from_shareable(shareable)
-#         global_weights = dxo.data
-
-#         # Before loading weights, tensors might need to be reshaped to support HE for secure aggregation.
-#         local_var_dict = self.model.state_dict()
-#         model_keys = global_weights.keys()
-#         for var_name in local_var_dict:
-#             if var_name in model_keys:
-#                 weights = global_weights[var_name]
-#                 try:
-#                     # reshape global weights to compute difference later on
-#                     global_weights[var_name] = np.reshape(
-#                         weights, local_var_dict[var_name].shape
-#                     )
-#                     # update the local dict
-#                     local_var_dict[var_name] = torch.as_tensor(global_weights[var_name])
-#                 except Exception as e:
-#                     raise ValueError(
-#                         "Convert weight from {} failed with error: {}".format(
-#                             var_name, str(e)
-#                         )
-#                     )
-#         self.model.load_state_dict(local_var_dict)
-
-#         # DITTO: Load Ditto personalized model
-#         self.ditto_helper.load_model(local_var_dict)
-#         # make a copy of model_global
-#         model_global = copy.deepcopy(self.model)
-#         for param in model_global.parameters():
-#             param.requires_grad = False
-
-#         self.local_train(fl_ctx=fl_ctx,train_loader=self.train_loader,model_global=model_global,abort_signal=abort_signal,)
-#         self.epoch_of_start_time += self.aggregation_epochs
-
-#         # local train ditto model
-#         self.ditto_helper.local_train(train_loader=self.train_loader,model_global=model_global,abort_signal=abort_signal,writer=self.writer,)
-
-#         metric = self.local_valid(self.ditto_helper.model,self.valid_loader,abort_signal,tb_id="val_metric_per_model",record_epoch=self.ditto_helper.epoch_global,)
-
-#         # save model
-#         self.ditto_helper.update_metric_save_model(metric=metric)
-
-#         # compute delta model, global model has the primary key set
-#         local_weights = self.model.state_dict()
-#         model_diff = {}
-#         for name in global_weights:
-#             if name not in local_weights:
-#                 continue
-#             model_diff[name] = np.subtract(
-#                 local_weights[name].cpu().numpy(),
-#                 global_weights[name],
-#                 dtype=np.float32,
-#             )
-#             if np.any(np.isnan(model_diff[name])):
-#                 self.system_panic(f"{name} weights became NaN...", fl_ctx)
-#                 return make_reply(ReturnCode.EXECUTION_EXCEPTION)
-
-#         # flush the tb writer
-#         self.writer.flush()
-
-#         # build the shareable
-#         dxo = DXO(data_kind=DataKind.WEIGHT_DIFF, data=model_diff)
-#         dxo.set_meta_prop(MetaKey.NUM_STEPS_CURRENT_ROUND, epoch_len)
-
-#         self.log_info(fl_ctx, "Local epochs finished. Returning shareable")
-#         return dxo.to_shareable()
-
-
-def get_trainer(method, config, **kwargs):
+def get_trainer(method, config, class_weights, **kwargs):
     if method in ["fedavg", "fedprox", "fedopt"]:
-        return BaseProstate2DTrainer(config)
+        return BaseTrainer(config, class_weights)
     elif method == "fedbn":
-        return PartPrivate2DTrainer(config, private_layers=["bn"])
+        return PartPrivateTrainer(config, class_weights, private_layers=["bn"])
     elif method == "fedattn":
-        return PartPrivate2DTrainer(config, private_layers=["attn", "se"])
+        return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
     elif method == "fedper":
-        return PartPrivate2DTrainer(config, private_layers=["head.fc"])
+        return PartPrivateTrainer(config, class_weights, private_layers=["head.fc"])
     elif method == "scaffold":
-        trainer = ScaffoldProstate2DTrainer(config)
+        trainer = ScaffoldTrainer(config, class_weights)
         exclude_vars = ["num_batches_tracked"]
         trainer.scaffold_helper.init(model=kwargs['model'], exclude_vars=exclude_vars)
         return trainer

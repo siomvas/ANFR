@@ -1,24 +1,24 @@
 from copy import deepcopy
 from pathlib import Path, PurePath
-from typing import Any, Dict, Optional, List
-
-from lightly.utils.scheduler import CosineWarmupScheduler
-from nvflare.app_opt.pt.fedproxloss import PTFedProxLoss
-from nvflare.apis.fl_component import FLComponent
-from nvflare.apis.utils.fl_context_utils import generate_log_message
-from nvflare.apis.event_type import EventType
-from nvflare.apis.fl_constant import LogMessageTag
+from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn as nn
+from lightly.utils.scheduler import CosineWarmupScheduler
+from nvflare.apis.event_type import EventType
+from nvflare.apis.fl_component import FLComponent
+from nvflare.apis.fl_constant import LogMessageTag
+from nvflare.apis.utils.fl_context_utils import generate_log_message
+from nvflare.app_opt.pt.fedproxloss import PTFedProxLoss
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 from tqdm import tqdm
 
-from fl_bench.utils.AltScaffoldHelper import AltScaffoldHelper, get_lr_values
-from .utils import WeightedFocalLoss
 from fl_bench.prostate_2d.src.utils import AGC
+from fl_bench.utils.AltScaffoldHelper import AltScaffoldHelper, get_lr_values
+
+from .utils import WeightedFocalLoss
 from .validator import Validator
 
 
@@ -88,7 +88,7 @@ class BaseTrainer(FLComponent):
                            )
 
         # Load optimizer state
-        if (self.opt_state is not None) and (self.optim_resume=="resume"):
+        if (self.opt_state is not None) and (self.optim_resume == "resume"):
             self.opt.load_state_dict(self.opt_state)
 
         # Configure scheduler
@@ -163,7 +163,7 @@ class BaseTrainer(FLComponent):
 
                 # Backward
                 self.opt.zero_grad(set_to_none=True)
-                self.scaler.scale(loss).backward()                
+                self.scaler.scale(loss).backward()
 
                 #  Gradient accumulation
                 if (i + 1) % self.gradient_accumulation_steps == 0:
@@ -316,7 +316,7 @@ class PartPrivateTrainer(BaseTrainer):
 
         self.private_layers_state = {}
         # head.fc for fedper, bn for fedbn, attn for fedattn
-        for k,v in self.model.state_dict().items():
+        for k, v in self.model.state_dict().items():
             if any(subname in k for subname in self.private_layers):
                 self.private_layer_state[k] = deepcopy(v)
         # Cleanup opt, sch & models
@@ -381,7 +381,7 @@ class PartPrivateTrainer(BaseTrainer):
 
         return model
 
-    def run(self, model, data_loader, num_steps, device= "cuda:0", logger=None,
+    def run(self, model, data_loader, num_steps, device="cuda:0", logger=None,
         abort_signal=None, fl_ctx=None):
         self.setup(model, logger, abort_signal)
         # different from base trainer,
@@ -417,7 +417,7 @@ class ScaffoldTrainer(BaseTrainer):
         self.configure_optimizer()
 
     def save_checkpoint(self, path: str, model: nn.Module) -> None:
-    
+
         path = PurePath(path)
         Path(path.parent).mkdir(parents=True, exist_ok=True)
 
@@ -474,7 +474,7 @@ class ScaffoldTrainer(BaseTrainer):
 
                 # Backward
                 self.opt.zero_grad(set_to_none=True)
-                self.scaler.scale(loss).backward()                
+                self.scaler.scale(loss).backward()
 
                 #  Gradient accumulation
                 if (i + 1) % self.gradient_accumulation_steps == 0:
@@ -509,7 +509,6 @@ class ScaffoldTrainer(BaseTrainer):
                 # Update progress bar
                 pbar.set_postfix(loss=f"{loss.item():.2f}")
                 pbar.update(1)
-
                 # Write average loss to tensorboard
                 avg_loss += loss.item()
 

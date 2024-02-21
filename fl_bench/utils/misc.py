@@ -7,6 +7,7 @@ import pprint
 
 import numpy as np
 import torch
+import torch.nn as nn
 from dotenv import load_dotenv
 from nvflare.apis.event_type import EventType
 from nvflare.apis.fl_component import FLComponent
@@ -96,3 +97,33 @@ class WeightedFocalLoss(_Loss):
         loss = -1 * (1 - pt) ** self.gamma * logpt
 
         return loss.mean()
+
+
+class MoonLoss(nn.Module):
+    def __init__(self, mu=0.01, tau=1) -> None:
+        """Compute MOON loss
+
+        Args:
+            mu: weighting parameter
+            tau: temperature parameter
+        """
+        super().__init__()
+        if mu < 0.0:
+            raise ValueError("mu should be no less than 0.0")
+        self.mu = mu
+        self.tau = tau
+
+    def forward(self, model, model_global, model_old, x):
+        rep_local = F.adaptive_avg_pool2d(model.forward_features(x), 1).view(x.size(0), -1)
+        rep_global = F.adaptive_avg_pool2d(model_global.forward_features(x), 1).view(x.size(0), -1)
+        rep_local_old = F.adaptive_avg_pool2d(model_old.forward_features(x), 1).view(x.size(0), -1)
+
+        sim_prev = F.cosine_similarity(rep_local, rep_local_old, dim=1)
+        sim_glob = F.cosine_similarity(rep_local, rep_global, dim=1)
+        exp_prev = torch.exp(sim_prev / self.tau)
+        exp_glob = torch.exp(sim_glob / self.tau)
+
+        loss = -torch.log(exp_glob / (exp_glob + exp_prev))
+        loss = self.mu * loss.mean()
+
+        return loss

@@ -68,6 +68,9 @@ def main():
     if args.method == "central":
         args.method = "fedavg"
 
+    if args.method != "fedprox":
+        train_config["fedprox_mu"] = 0.0
+
     print(f"Setting method = {args.method}")
     client_config["components"][0]["args"]["method"] = args.method
 
