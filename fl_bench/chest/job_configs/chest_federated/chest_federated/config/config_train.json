@@ -6,6 +6,7 @@
     "max_steps": 150,
     "dataset": "CXR14",
     "scheduler": "none",
+    "criterion": "bce",
     "model_name": "unet_resnet50_dbn_pretrained",
     "optimizer_args": {
         "class": "Adam"

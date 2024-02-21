@@ -18,7 +18,7 @@ grad_clipping_type=none
 grad_clipping_value=1.0
 batch_size=64
 
-for method in fedavg scaffold; do
+for method in fedopt; do
     for grad_clipping_type in none norm; do
         for model_name in seresnet_50_supervised; do
 

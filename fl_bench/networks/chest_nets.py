@@ -1,10 +1,9 @@
-import torch
-import torch.nn as nn
 import os
+
 import timm
+import torch
 
 from fl_bench.utils.misc import seed_everything
-from functools import partial
 
 model_dir = "/path/to/model_weights"
 torch.hub.set_dir(model_dir)
@@ -17,7 +16,9 @@ def resnet_50(seed):
     bb = timm.create_model(
         'resnet50.ra_in1k',
         pretrained=False,
-        num_classes=NUM_CLASSES)
+        num_classes=NUM_CLASSES,
+        in_chans=1
+    )
     return bb
 
 
@@ -27,7 +28,9 @@ def resnet_50_supervised(seed):
     bb = timm.create_model(
         'resnet50.ra_in1k',
         pretrained=True,
-        num_classes=NUM_CLASSES)
+        num_classes=NUM_CLASSES,
+        in_chans=1
+    )
     os.environ['https_proxy'] = ''
     return bb
 
@@ -37,7 +40,8 @@ def seresnet_50(seed):
     model = timm.create_model(
         'seresnet50.ra2_in1k',
         pretrained=False,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
+        in_chans=1
     )
     return model
 
@@ -49,7 +53,8 @@ def seresnet_50_supervised(seed):
     model = timm.create_model(
         'seresnet50.ra2_in1k',
         pretrained=True,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
+        in_chans=1
     )
     os.environ['https_proxy'] = ''
     return model
@@ -60,7 +65,8 @@ def nf_resnet50(seed):
     model = timm.create_model(
         'nf_resnet50.ra2_in1k',
         pretrained=False,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
+        in_chans=1
     )
     return model
 
@@ -71,7 +77,8 @@ def nf_resnet50_supervised(seed):
     model = timm.create_model(
         'nf_resnet50.ra2_in1k',
         pretrained=True,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
+        in_chans=1
     )
     os.environ['https_proxy'] = ''
     return model
@@ -82,7 +89,8 @@ def nf_se_resnet50(seed):
     model = timm.create_model(
         'nf_seresnet50',
         pretrained=False,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
+        in_chans=1
     )
     return model
 
@@ -93,7 +101,8 @@ def caformer_supervised(seed):
     model = timm.create_model(
         'caformer_s18.sail_in1k',
         pretrained=True,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
+        in_chans=1
         )
     os.environ['https_proxy'] = ''
     return model

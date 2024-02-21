@@ -161,7 +161,7 @@ class BaseTrainer(FLComponent):
                     image = batch["image"].to(device)
                     label = batch["label"].to(device)
                     preds = self.model(image)
-                    loss = self.criterion(preds, label) / self.gradient_accumulation_steps
+                    loss = self.criterion(preds, label.float()) / self.gradient_accumulation_steps
                     if self.criterion_prox is not None:
                         loss = loss + self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
 
@@ -476,7 +476,7 @@ class ScaffoldTrainer(BaseTrainer):
                     image = batch["image"].to(device)
                     label = batch["label"].to(device)
                     preds = self.model(image)
-                    loss = self.criterion(preds, label) / self.gradient_accumulation_steps
+                    loss = self.criterion(preds, label.float()) / self.gradient_accumulation_steps
                     if self.criterion_prox is not None:
                         loss = loss + self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
 

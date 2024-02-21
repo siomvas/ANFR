@@ -18,8 +18,8 @@ grad_clipping_type=none
 grad_clipping_value=1.0
 batch_size=64
 
-for method in fedavg scaffold; do
-    for grad_clipping_type in none norm; do
+for method in fedopt; do
+    for grad_clipping_type in none; do
         for model_name in nf_resnet50_pretrained; do
 
             name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_short"

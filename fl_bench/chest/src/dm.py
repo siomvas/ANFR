@@ -1,20 +1,19 @@
 import json
-import numpy as np
 import os
-import pandas as pd
 import random
 
-import torch
-from torch.utils.data import DataLoader
-from fl_bench.utils.misc import seed_everything
-from monai.data.dataset import Dataset, CacheDataset
-from monai.data.decathlon_datalist import load_decathlon_datalist
 import monai.transforms as T
+import numpy as np
+import pandas as pd
+import torch
+from monai.data.dataset import CacheDataset, Dataset
+from monai.data.decathlon_datalist import load_decathlon_datalist
 from monai.transforms.compose import Compose
-
 from nvflare.apis.event_type import EventType
 from nvflare.apis.fl_component import FLComponent
-from nvflare.apis.fl_context import FLContext
+from torch.utils.data import DataLoader
+
+from fl_bench.utils.misc import seed_everything
 
 
 def seed_worker(worker_id):
@@ -39,47 +38,90 @@ class ChestDataModule():
         self.cache_rate = cache_rate
 
         # transforms:
+        # self.transform_train = Compose([
+        #     T.LoadImaged(
+        #         reader="PILReader",
+        #         converter=lambda x: x.convert("L"),
+        #         keys=["image"],
+        #         image_only=True,
+        #         ensure_channel_first=True,
+        #         reverse_indexing=False
+        #     ),
+        #     T.Resized(keys=["image"], spatial_size=[224, 224]),
+        #     T.ScaleIntensityd(keys=["image"]),
+        #     T.HistogramNormalized(keys=["image"], min=0, max=1),
+        #     T.RandFlipd(keys=["image"], spatial_axis=1, prob=0.5),
+        #     T.RandZoomd(keys=["image"], min_zoom=0.9, max_zoom=1.1, prob=0.5),
+        #     T.RandRotated(keys=["image"], range_x=np.pi/18, prob=0.5),
+        #     T.EnsureTyped(keys=["image", "label"]),
+        # ])
+
+        # self.transform_valid = Compose([
+        #     T.LoadImaged(
+        #         reader="PILReader",
+        #         converter=lambda x: x.convert("L"),
+        #         keys=["image"],
+        #         image_only=True,
+        #         ensure_channel_first=True,
+        #         reverse_indexing=False
+        #     ),
+        #     T.Resized(keys=["image"], spatial_size=[224, 224]),
+        #     T.ScaleIntensityd(keys=["image"]),
+        #     T.HistogramNormalized(keys=["image"], min=0, max=1),
+        #     T.EnsureTyped(keys=["image", "label"]),
+        # ])
+
+        # switch to preprocessed data for faster training
         self.transform_train = Compose([
-            T.LoadImaged(keys=["image"], image_only=True, ensure_channel_first=True),
+            T.LoadImaged(
+                reader="PILReader",
+                keys=["image"],
+                image_only=True,
+                ensure_channel_first=True,
+                reverse_indexing=False
+            ),
             T.ScaleIntensityd(keys=["image"]),
             T.HistogramNormalized(keys=["image"], min=0, max=1),
-            T.Resized(keys=["image"], spatial_size=[224, 224]),
-            T.RandRotated(keys=["image"], range_x=np.pi/18, prob=0.5),
-            T.RandFlipd(keys=["image"], spatial_axis=0, prob=0.5),
+            T.RandFlipd(keys=["image"], spatial_axis=1, prob=0.5),
             T.RandZoomd(keys=["image"], min_zoom=0.9, max_zoom=1.1, prob=0.5),
+            T.RandRotated(keys=["image"], range_x=np.pi/18, prob=0.5),
             T.EnsureTyped(keys=["image", "label"]),
         ])
 
         self.transform_valid = Compose([
-            T.LoadImaged(keys=["image"], image_only=True, ensure_channel_first=True),
+            T.LoadImaged(
+                reader="PILReader",
+                keys=["image"],
+                image_only=True,
+                ensure_channel_first=True,
+                reverse_indexing=False
+            ),
             T.ScaleIntensityd(keys=["image"]),
             T.HistogramNormalized(keys=["image"], min=0, max=1),
-            T.Resized(keys=["image"], spatial_size=[224, 224]),
             T.EnsureTyped(keys=["image", "label"]),
         ])
 
-        dataset_dir = os.path.join(data_dir, "images")
-        datalist_paths = os.path.join(data_dir, "datalists")
+        # dataset_dir = os.path.join(data_dir, "images")
+        dataset_dir = os.path.join(data_dir, "images_224")
+        datalist_paths = os.path.join(data_dir, "datalists", f"seed_{self.seed}")
 
         if central:
             client_datalist = os.path.join(datalist_paths, "central.json")
         else:
             client_datalist = os.path.join(datalist_paths, client_idx + ".json")
 
-        # self.train_list = load_decathlon_datalist(
-        #     data_list_file_path=client_datalist,
-        #     is_segmentation=False,
-        #     data_list_key="training",
-        #     base_dir=dataset_dir
-        # )
-        # self.valid_list = load_decathlon_datalist(
-        #     data_list_file_path=client_datalist,
-        #     is_segmentation=False,
-        #     data_list_key="validation",
-        #     base_dir=dataset_dir
-        # )
-        self.train_list = pd.read_json(client_datalist)["training"].to_list()
-        self.valid_list = pd.read_json(client_datalist)["validation"].to_list()
+        self.train_list = load_decathlon_datalist(
+            data_list_file_path=client_datalist,
+            is_segmentation=False,
+            data_list_key="training",
+            base_dir=dataset_dir
+        )
+        self.valid_list = load_decathlon_datalist(
+            data_list_file_path=client_datalist,
+            is_segmentation=False,
+            data_list_key="validation",
+            base_dir=dataset_dir
+        )
 
         self.setup()
 
@@ -138,17 +180,17 @@ class ChestSplitter(FLComponent):
         self.split_dir = split_dir
         self.num_sites = num_sites
         self.seed = seed
+        self.dest_path = os.path.join(self.data_dir, self.split_dir, f"seed_{self.seed}")
 
         seed_everything(seed)
 
     def handle_event(self, event_type, fl_ctx):
         if event_type == EventType.START_RUN:
             # if the split directory with this seed split_dir_seed={seed} already exists, skip the split
-            seeded_split_path = os.path.join(self.data_dir, self.split_dir, f"seed={self.seed}")
-            if os.path.isdir(seeded_split_path):
+            if os.path.isdir(self.dest_path):
                 self.log_info(
                     fl_ctx,
-                    f"Split directory {seeded_split_path} already exists, skipping the split.",
+                    f"Split directory {self.dest_path} already exists, skipping the split.",
                 )
                 return
 
@@ -156,14 +198,16 @@ class ChestSplitter(FLComponent):
 
     def split(self, fl_ctx):
 
-        self.log_info(
-            fl_ctx,
-            f"Partitioning {self.dataset} training set into {self.num_sites} with seed = {self.seed}",
-        )
+        if fl_ctx:
+            self.log_info(
+                fl_ctx,
+                f"Partitioning {self.dataset} training set into {self.num_sites} with seed = {self.seed}",
+            )
+
+        os.makedirs(self.dest_path, exist_ok=True)
         class_sum = self._partition_data()
 
-        os.makedirs(f"{self.split_dir}_seed={self.seed}", exist_ok=True)
-        sum_file_name = os.path.join(f"{self.split_dir}_seed={self.seed}", "summary.txt")
+        sum_file_name = os.path.join(self.dest_path, "summary.txt")
         with open(sum_file_name, "w") as sum_file:
             sum_file.write(f"Number of clients: {self.num_sites} \n")
             sum_file.write(f"Seed: {self.seed} \n")
@@ -189,14 +233,6 @@ class ChestSplitter(FLComponent):
             valid_list = pd.read_csv(os.path.join(self.data_dir, "test_list.txt"), header=None)[0].to_list()
             valid_data = data[data['Image Index'].isin(valid_list)]
 
-            # convert the relative paths to absolute paths
-            train_data["Image Index"] = train_data["Image Index"].apply(
-                lambda x: os.path.join(self.data_dir, "images", x)
-            )
-            valid_data["Image Index"] = valid_data["Image Index"].apply(
-                lambda x: os.path.join(self.data_dir, "images", x)
-            )
-
             # get the unique patient IDs for the training set
             patients = train_data["Patient ID"].unique()
             # shuffle the patients
@@ -220,7 +256,7 @@ class ChestSplitter(FLComponent):
                     new_item["image"] = row["Image Index"]
                     new_item["label"] = row.iloc[2:].values.tolist()
                     json_data["validation"].append(new_item)
-                with open(f"site-{i+1}.json", "w") as f:
+                with open(f"{self.dest_path}/site-{i+1}.json", "w") as f:
                     json.dump(json_data, f, indent=4)
 
             # get the class counts for each site
