@@ -82,10 +82,7 @@ class FedISICLearner(Learner):
         N = len(self.dm.train_dataset)
         class_weights = []
         for i in range(8):
-            if weights[i] == 0:
-                class_weights.append(0)
-            else:
-                class_weights.append(N / weights[i])
+            class_weights.append(N / (weights[i]+1e-6))
         self.class_weights = torch.FloatTensor(class_weights).to(self.device)
         print("Class weights extract from training dataset applied to loss function:", self.class_weights)
 
@@ -154,7 +151,7 @@ class FedISICLearner(Learner):
                 break
             except Exception as e:
                 if i < self.max_retry:
-                    self.log_warning(fl_ctx, "Something wrong in training, retrying.")
+                    self.log_warning(fl_ctx, "Something wrong in training, retrying. \n {e}")
                     # Restore trainer states to the beginning of the round
                     if os.path.exists(self.last_model_path):
                         self.log_warning(fl_ctx, f"Loading last model from {self.last_model_path}")

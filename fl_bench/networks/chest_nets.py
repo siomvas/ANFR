@@ -35,6 +35,9 @@ def resnet_50_supervised(seed):
     return bb
 
 
+resnet_50_pretrained = resnet_50_supervised
+
+
 def seresnet_50(seed):
     seed_everything(seed)
     model = timm.create_model(
@@ -104,5 +107,29 @@ def caformer_supervised(seed):
         num_classes=NUM_CLASSES,
         in_chans=1
         )
+    os.environ['https_proxy'] = ''
+    return model
+
+
+def resnet50_v2_supervised(seed):
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'resnetv2_50.a1h_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+    )
+    os.environ['https_proxy'] = ''
+    return model
+
+
+def resnet50_gn_supervised(seed):
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'resnet50_gn.a1h_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+    )
     os.environ['https_proxy'] = ''
     return model

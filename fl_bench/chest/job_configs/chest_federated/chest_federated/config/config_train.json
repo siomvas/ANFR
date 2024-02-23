@@ -1,22 +1,21 @@
 {
-    "learning_rate": 0.001,
+    "learning_rate": 0.0005,
     "fedprox_mu": 0.0,
-    "cache_dataset": 1.0,
-    "batch_size": 1,
-    "max_steps": 150,
+    "batch_size": 64,
+    "max_steps": 20000,
     "dataset": "CXR14",
-    "scheduler": "none",
+    "scheduler": "onecycle",
     "criterion": "bce",
-    "model_name": "unet_resnet50_dbn_pretrained",
+    "model_name": "resnet_50_supervised",
     "optimizer_args": {
         "class": "Adam"
     },
-    "optim_resume": "restart",
-    "local_steps": 1,
+    "optim_resume": "resume",
+    "local_steps": 400,
     "use_half_precision": true,
     "interp_method": "",
-    "cache_rate": 1.0,
+    "cache_rate": 0.5,
     "grad_clipping_type": "none",
     "grad_clipping_value": 1.0,
-    "steps_or_epochs": "epochs"
+    "steps_or_epochs": "steps"
 }

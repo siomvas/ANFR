@@ -2,9 +2,9 @@
     "format_version": 2,
     "min_clients": 4,
     "dataset": "CXR14",
-    "num_rounds": 150,
+    "num_rounds": 50,
     "seed": 2024,
-    "model_path": "fl_bench.networks.chest_nets.unet_resnet50_dbn_pretrained",
+    "model_path": "fl_bench.networks.chest_nets.resnet_50_supervised",
     "TRAIN_SPLIT_ROOT": "datalists",
     "server": {
         "heart_beat_timeout": 600
@@ -50,18 +50,17 @@
                 "device": "cpu",
                 "source_model": "model",
                 "optimizer_args": {
-                    "path": "torch.optim.SGD",
+                    "path": "torch.optim.Adam",
                     "args": {
-                        "lr": 1.0,
-                        "momentum": 0.9
+                        "lr": 0.001
                     },
                     "config_type": "dict"
                 },
                 "lr_scheduler_args": {
-                    "path": "torch.optim.lr_scheduler.CosineAnnealingLR",
+                    "path": "torch.optim.lr_scheduler.StepLR",
                     "args": {
-                        "T_max": "{num_rounds}",
-                        "eta_min": 0.5
+                        "step_size": 1,
+                        "gamma": 0.99
                     },
                     "config_type": "dict"
                 }
@@ -80,7 +79,7 @@
             "path": "fl_bench.utils.metric_logger.GlobalMetricLogger",
             "args": {
                 "log_dir": "logs",
-                "log_name": "val_mean_auroc"
+                "log_name": "mean_auroc"
             }
         },
         {

@@ -77,17 +77,7 @@ class ChestLearner(Learner):
             seed=self.seed,
         )
 
-        num_classes = {"CXR14": 15, "CXP": 14, "COMBO": 7}[config_train["dataset"]]
-        weights = np.zeros(num_classes)
-        for x in self.dm.train_dataset:
-            weights += x["label"].numpy()
-        N = len(self.dm.train_dataset)
-        class_weights = []
-        for i in range(num_classes):
-            class_weights.append((N - weights[i])/(weights[i]+1e-6))
-        self.class_weights = torch.FloatTensor(class_weights).to(self.device)
-        print("Class weights extract from training dataset applied to loss function:", self.class_weights)
-
+        self.class_weights = torch.FloatTensor(self.dm.weights).to(self.device)
         self.local_steps = config_train["local_steps"]
         self.key_metric = "mean_auroc"
         self.best_metric = 0.0
@@ -238,6 +228,10 @@ class ChestLearner(Learner):
         # 2. Prepare dataset
         if validate_type == ValidateType.BEFORE_TRAIN_VALIDATE:
             data_loader = self.dm.val_dataloader
+            # dxo = DXO(data_kind=DataKind.METRICS, data=0)
+            # return dxo.to_shareable()
+            # try to reduce from 3x validations to 2x
+            return make_reply(ReturnCode.OK)
         elif validate_type == ValidateType.MODEL_VALIDATE:
             # test set here if used
             data_loader = self.dm.val_dataloader

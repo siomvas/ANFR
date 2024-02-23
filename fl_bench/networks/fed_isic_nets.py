@@ -130,6 +130,9 @@ def resnet_50_pretrained_timm(seed):
     return bb
 
 
+resnet_50_pretrained = resnet_50_pretrained_timm
+
+
 def resnet_50_pretrained_dino(seed):
     seed_everything(seed)
     os.environ['https_proxy'] = 'http://proxy.example.org:3128'
@@ -997,6 +1000,30 @@ def deit_3_base_supervised(seed):
     seed_everything(seed)
     model = timm.create_model(
         'deit3_base_patch16_224.fb_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+    )
+    os.environ['https_proxy'] = ''
+    return model
+
+
+def resnet50_v2_supervised(seed):
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'resnetv2_50.a1h_in1k',
+        pretrained=True,
+        num_classes=NUM_CLASSES
+    )
+    os.environ['https_proxy'] = ''
+    return model
+
+
+def resnet50_gn_supervised(seed):
+    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
+    seed_everything(seed)
+    model = timm.create_model(
+        'resnet50_gn.a1h_in1k',
         pretrained=True,
         num_classes=NUM_CLASSES
     )

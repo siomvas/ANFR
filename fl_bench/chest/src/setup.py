@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--steps_or_epochs", type=str, default="steps", choices=["steps", "epochs"])
     parser.add_argument("-seed", type=int, default=222)
     parser.add_argument("--optim_resume", type=str, default="restart", choices=["restart", "resume"])
+    parser.add_argument("--criterion", type=str, default="bce", choices=["bce", "fl"])
     parser.add_argument("--cache_rate", type=float, default=1.0)
     parser.add_argument("--dataset", type=str, default="CXR14", choices=["CXR14", "CXP", "COMBO"])
     parser.add_argument("--fedprox_mu", type=float, default=0.0)
@@ -49,7 +50,7 @@ def main():
 
     # update model
     print(f"Setting model name = {args.model_name}")
-    model_path = f"fl_bench.networks.prostate_2d_nets.{args.model_name}"
+    model_path = f"fl_bench.networks.chest_nets.{args.model_name}"
     server_config["model_path"] = model_path
     train_config["model_name"] = args.model_name
     job_name += f"_{args.model_name}"
@@ -105,7 +106,7 @@ def main():
                 ],
             }
         ]
-        server_config["components"][4]["args"]["expected_data_kind"] = {
+        server_config["components"][5]["args"]["expected_data_kind"] = {
             "_model_weights_": "WEIGHT_DIFF",
             "scaffold_c_diff": "WEIGHT_DIFF",
         }
@@ -113,17 +114,17 @@ def main():
 
     else:
         server_config["task_result_filters"] = []
-        server_config["components"][4]["args"]["expected_data_kind"] = "WEIGHT_DIFF"
+        server_config["components"][5]["args"]["expected_data_kind"] = "WEIGHT_DIFF"
         server_config["workflows"][0]["name"] = "ScatterAndGather"
 
     if args.method == "fedattn" or args.method == "fedper":
-        # server_config["components"][4]["args"]["exclude_vars"] = "attn|se"
-        server_config["components"][4]["args"]["exclude_vars"] = ""
+        # server_config["components"][5]["args"]["exclude_vars"] = "attn|se"
+        server_config["components"][5]["args"]["exclude_vars"] = ""
     elif args.method == "fedbn":
-        # server_config["components"][4]["args"]["exclude_vars"] = "bn"
-        server_config["components"][4]["args"]["exclude_vars"] = ""
+        # server_config["components"][5]["args"]["exclude_vars"] = "bn"
+        server_config["components"][5]["args"]["exclude_vars"] = ""
     else:
-        server_config["components"][4]["args"]["exclude_vars"] = ""
+        server_config["components"][5]["args"]["exclude_vars"] = ""
 
     job_name += f"_fed_isic_{args.method}"
     # update seed
@@ -159,7 +160,7 @@ def main():
     misc_optional_args = [
         "scheduler", "optim_resume", "batch_size", "interp_method",
         "cache_rate", "fedprox_mu", "grad_clipping_type",
-        "grad_clipping_value", "steps_or_epochs"
+        "grad_clipping_value", "steps_or_epochs", "criterion"
     ]
     for arg in misc_optional_args:
         if arg in args:

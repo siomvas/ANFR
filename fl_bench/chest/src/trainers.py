@@ -16,8 +16,11 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from tqdm import tqdm
 
 from fl_bench.prostate_2d.src.utils import AGC
-from fl_bench.utils.AltScaffoldHelper import (AltScaffoldHelper, DittoHelper,
-                                              get_lr_values)
+from fl_bench.utils.AltScaffoldHelper import (
+    AltScaffoldHelper,
+    DittoHelper,
+    get_lr_values,
+)
 
 from .utils import FocalLoss
 from .validator import Validator
@@ -72,24 +75,28 @@ class BaseTrainer(FLComponent):
         self.fl_logger.info(log_msg)
         if fire_event:
             self._fire_log_event(
-                event_type=EventType.INFO_LOG_AVAILABLE, log_tag=LogMessageTag.INFO, log_msg=log_msg, fl_ctx=fl_ctx
+                event_type=EventType.INFO_LOG_AVAILABLE,
+                log_tag=LogMessageTag.INFO,
+                log_msg=log_msg,
+                fl_ctx=fl_ctx,
             )
 
     def configure_optimizer(self):
 
-        optimizer_class = self.optimizer_dict.pop('class', None)
-        self.opt = eval(f'torch.optim.{optimizer_class}')(
-            self.model.parameters(),
-            lr=self.lr,
-            **self.optimizer_dict)
-        self.optimizer_dict['class'] = optimizer_class
+        optimizer_class = self.optimizer_dict.pop("class", None)
+        self.opt = eval(f"torch.optim.{optimizer_class}")(
+            self.model.parameters(), lr=self.lr, **self.optimizer_dict
+        )
+        self.optimizer_dict["class"] = optimizer_class
 
         # If using AGC, wrap the optimizer
         if self.grad_clipping_type == "agc":
-            self.opt = AGC(self.model.parameters(),
-                           self.opt, lamda=self.grad_clipping_value,
-                           model=self.model
-                           )
+            self.opt = AGC(
+                self.model.parameters(),
+                self.opt,
+                lamda=self.grad_clipping_value,
+                model=self.model,
+            )
 
         # Load optimizer state
         if (self.opt_state is not None) and (self.optim_resume == "resume"):
@@ -102,26 +109,22 @@ class BaseTrainer(FLComponent):
                 max_lr=self.lr,
                 total_steps=self.max_steps,
                 anneal_strategy="cos",
-                final_div_factor=1e4
+                final_div_factor=1e4,
             )
         elif self.scheduler_type == "warmcosine":
             self.sch = CosineWarmupScheduler(
                 self.opt,
-                warmup_epochs=self.max_steps*0.2,
-                max_epochs=self.max_steps/self.gradient_accumulation_steps,
-                end_value=0.001
+                warmup_epochs=self.max_steps * 0.2,
+                max_epochs=self.max_steps / self.gradient_accumulation_steps,
+                end_value=0.001,
             )
         elif self.scheduler_type == "cosine":
             self.sch = CosineAnnealingLR(
-                self.opt,
-                T_max=self.max_steps,
-                eta_min=0.001
+                self.opt, T_max=self.max_steps, eta_min=0.001
             )
         elif self.scheduler_type == "none":
             self.sch = torch.optim.lr_scheduler.ConstantLR(
-                self.opt,
-                factor=1,
-                total_iters=self.max_steps
+                self.opt, factor=1, total_iters=self.max_steps
             )
         else:
             raise ValueError(f"Invalid scheduler type {self.scheduler_type}")
@@ -141,7 +144,9 @@ class BaseTrainer(FLComponent):
                 batch = next(it)
             yield batch
 
-    def training_loop(self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"):
+    def training_loop(
+        self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"
+    ):
 
         # if steps_or_epochs is epochs, num_steps given to training_loop
         # is the number of epochs, otherwise it is the number of steps
@@ -161,9 +166,16 @@ class BaseTrainer(FLComponent):
                     image = batch["image"].to(device)
                     label = batch["label"].to(device)
                     preds = self.model(image)
-                    loss = self.criterion(preds, label.float()) / self.gradient_accumulation_steps
+                    loss = (
+                        self.criterion(preds, label.float())
+                        / self.gradient_accumulation_steps
+                    )
                     if self.criterion_prox is not None:
-                        loss = loss + self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
+                        loss = (
+                            loss
+                            + self.criterion_prox(self.model, self.global_model)
+                            / self.gradient_accumulation_steps
+                        )
 
                 # Backward
                 self.opt.zero_grad()
@@ -177,7 +189,7 @@ class BaseTrainer(FLComponent):
                         torch.nn.utils.clip_grad_norm_(
                             self.model.parameters(),
                             max_norm=self.grad_clipping_value,
-                            norm_type=2.0
+                            norm_type=2.0,
                         )
 
                     # Apply gradient
@@ -187,7 +199,9 @@ class BaseTrainer(FLComponent):
 
                     if self.logger is not None:
                         step = self.current_step / self.gradient_accumulation_steps
-                        self.logger.add_scalar("Learning Rate", self.sch.get_last_lr()[-1], step)
+                        self.logger.add_scalar(
+                            "Learning Rate", self.sch.get_last_lr()[-1], step
+                        )
 
                 # Update progress bar
                 pbar.set_postfix(loss=f"{loss.item():.2f}")
@@ -204,16 +218,16 @@ class BaseTrainer(FLComponent):
             self.logger.add_scalar(
                 "Loss/Round Loss",
                 avg_loss / num_steps,
-                self.current_step / self.gradient_accumulation_steps
+                self.current_step / self.gradient_accumulation_steps,
             )
-            # Measure post-train train metric every 5 rounds starting from the 5th round
+            # Measure train metric every 5 rounds starting from the 5th round
             if self.current_round % 5 == 0 and self.current_round > 4:
                 post_train_metrics = self.validator.run(self.model, data_loader)
                 for k, v in post_train_metrics.items():
                     self.logger.add_scalar(
                         f"Post-Train Train {k}",
                         v,
-                        self.current_step / self.gradient_accumulation_steps
+                        self.current_step / self.gradient_accumulation_steps,
                     )
 
     def setup(self, model, logger, data_loader, num_steps, abort_signal):
@@ -240,8 +254,7 @@ class BaseTrainer(FLComponent):
         # Save opt & sch states
         self.opt_state = (
             deepcopy(self.opt.state_dict())
-            if self.optim_resume == "resume"
-            else None
+            if self.optim_resume == "resume" else None
         )
         self.sch_state = deepcopy(self.sch.state_dict())
 
@@ -290,7 +303,7 @@ class BaseTrainer(FLComponent):
         device: str = "cuda:0",
         logger: Optional[SummaryWriter] = None,
         abort_signal: Optional[Any] = None,
-        fl_ctx=None
+        fl_ctx=None,
     ):
 
         self.setup(model, logger, data_loader, num_steps, abort_signal)
@@ -301,13 +314,14 @@ class BaseTrainer(FLComponent):
 
 
 class PartPrivateTrainer(BaseTrainer):
-    """This class is used to train FL models while keeping part of the model private.
+    """This class is used to train while keeping part of the model private.
     If the private part is bn layers, the model will be trained with FedBN.
-    If the private part is attention layers, the model will be trained with FedAttn.
     If the private part is the head, the model will be trained with FedPer.
-    Any layer or list of layers can be chosen as private by passing the correct names in private_layers.
-    each entry in private_layers should be a string with the name of the layer to be kept private.
-    the interpolation method is also configurable between linear, inverse-linear, constant, and fixbn style.
+    Any layer or list of layers can be chosen as private
+    by passing their names in private_layers. Each entry in private_layers
+    should be a string with the name of the layer to be kept private.
+    The interpolation method is also configurable between linear, inv-linear,
+    constant, and fixbn style.
 
     """
 
@@ -315,11 +329,13 @@ class PartPrivateTrainer(BaseTrainer):
         super().__init__(config)
         self.private_layers = private_layers
         self.private_layer_state = None
-        self.interp_method = config['interp_method']
+        self.interp_method = config["interp_method"]
 
     def cleanup(self):
 
-        self.opt_state = deepcopy(self.opt.state_dict()) if self.optim_resume == "resume" else None
+        self.opt_state = (
+            deepcopy(self.opt.state_dict()) if self.optim_resume == "resume" else None
+        )
         self.sch_state = deepcopy(self.sch.state_dict())
 
         self.private_layers_state = {}
@@ -345,15 +361,16 @@ class PartPrivateTrainer(BaseTrainer):
             "model": model.state_dict(),
             "optimizer": self.opt_state,
             "scheduler": self.sch_state,
-            "private_layer_state": self.private_layer_state
+            "private_layer_state": self.private_layer_state,
         }
         torch.save(ckpt, str(path))
 
     def load_checkpoint(self, path: str, model: nn.Module, fl_ctx) -> nn.Module:
-        '''
+        """
         Load_checkpoint is written with the learner.model object in mind.
-        It was originally only called to restore its weights from the checkpoint in the case of a crash.
-        '''
+        It was originally only called
+        to restore its weights from the checkpoint in the case of a crash.
+        """
         ckpt = torch.load(path)
 
         self.current_step = ckpt.get("global_steps", 0)
@@ -366,31 +383,43 @@ class PartPrivateTrainer(BaseTrainer):
         if self.private_layer_state is not None:
             if self.interp_method is None:
                 final_dict = deepcopy(self.private_layer_state)
-            elif self.interp_method == 'linear':
+            elif self.interp_method == "linear":
                 # Shared -> Private
                 interp_ratio = self.current_step / self.max_steps
-            elif self.interp_method == 'inverse_linear':
+            elif self.interp_method == "inverse_linear":
                 # Private -> Shared
                 interp_ratio = 1 - self.current_step / self.max_steps
-            elif self.interp_method == 'fixbn':
+            elif self.interp_method == "fixbn":
                 if self.current_step < self.max_steps / 2:
                     interp_ratio = 0
                 else:
                     interp_ratio = 1
-            elif self.interp_method == 'const':
-                self.log_info(fl_ctx, f'Round {self.current_round}: interp method is const')
+            elif self.interp_method == "const":
+                self.log_info(
+                    fl_ctx, f"Round {self.current_round}: interp = const"
+                )
                 interp_ratio = 0.5
 
             for k, v in self.private_layer_state.items():
                 shared_model_value = model.state_dict()[k]
-                final_dict[k] = v * interp_ratio + shared_model_value * (1 - interp_ratio)
+                final_dict[k] = v * interp_ratio + shared_model_value * (
+                    1 - interp_ratio
+                )
 
             model.load_state_dict(final_dict, strict=False)
 
         return model
 
-    def run(self, model, data_loader, num_steps, device="cuda:0", logger=None,
-        abort_signal=None, fl_ctx=None):
+    def run(
+        self,
+        model,
+        data_loader,
+        num_steps,
+        device="cuda:0",
+        logger=None,
+        abort_signal=None,
+        fl_ctx=None,
+    ):
         self.setup(model, logger, abort_signal)
         # different from base trainer,
         # forces a load_checkpoint to restore the private layers
@@ -436,11 +465,11 @@ class ScaffoldTrainer(BaseTrainer):
             "optimizer": self.opt_state,
             "scheduler": self.sch_state,
             "c_global": self.scaffold_helper.c_global.state_dict(),
-            "c_local": self.scaffold_helper.c_local.state_dict()
+            "c_local": self.scaffold_helper.c_local.state_dict(),
         }
         torch.save(ckpt, str(path))
 
-    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx=None) -> nn.Module:
+    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx=None):
 
         ckpt = torch.load(path)
 
@@ -454,7 +483,9 @@ class ScaffoldTrainer(BaseTrainer):
         model.load_state_dict(ckpt["model"])
         return model
 
-    def training_loop(self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"):
+    def training_loop(
+        self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"
+    ):
 
         # if steps_or_epochs is epochs, num_steps given to training_loop
         # is the number of epochs, otherwise it is the number of steps
@@ -476,9 +507,16 @@ class ScaffoldTrainer(BaseTrainer):
                     image = batch["image"].to(device)
                     label = batch["label"].to(device)
                     preds = self.model(image)
-                    loss = self.criterion(preds, label.float()) / self.gradient_accumulation_steps
+                    loss = (
+                        self.criterion(preds, label.float())
+                        / self.gradient_accumulation_steps
+                    )
                     if self.criterion_prox is not None:
-                        loss = loss + self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
+                        loss = (
+                            loss
+                            + self.criterion_prox(self.model, self.global_model)
+                            / self.gradient_accumulation_steps
+                        )
 
                 # Backward
                 self.opt.zero_grad(set_to_none=True)
@@ -492,7 +530,7 @@ class ScaffoldTrainer(BaseTrainer):
                         torch.nn.utils.clip_grad_norm_(
                             self.model.parameters(),
                             max_norm=self.grad_clipping_value,
-                            norm_type=2.0
+                            norm_type=2.0,
                         )
 
                     # Apply gradient
@@ -506,12 +544,14 @@ class ScaffoldTrainer(BaseTrainer):
                         model=self.model,
                         curr_lr=curr_lr,
                         c_global_para=c_global_para,
-                        c_local_para=c_local_para
+                        c_local_para=c_local_para,
                     )
 
                     if self.logger is not None:
-                        step = self.current_step / self.gradient_accumulation_steps
-                        self.logger.add_scalar("Learning Rate", self.sch.get_last_lr()[-1], step)
+                        step = self.current_step/self.gradient_accumulation_steps
+                        self.logger.add_scalar(
+                            "Learning Rate", self.sch.get_last_lr()[-1], step
+                        )
 
                 # Update progress bar
                 pbar.set_postfix(loss=f"{loss.item():.2f}")
@@ -528,7 +568,7 @@ class ScaffoldTrainer(BaseTrainer):
             self.logger.add_scalar(
                 "Loss/Round Loss",
                 avg_loss / num_steps,
-                self.current_step / self.gradient_accumulation_steps
+                self.current_step / self.gradient_accumulation_steps,
             )
             # SCAFFOLD terms update step
             self.scaffold_helper.terms_update(
@@ -538,14 +578,14 @@ class ScaffoldTrainer(BaseTrainer):
                 c_local_para=c_local_para,
                 model_global=self.global_model,
             )
-            # Measure post-train train metric every 5 rounds starting from the 5th round
+            # Measure post-train metric every 5 rounds from the 5th round
             if self.current_round % 5 == 0 and self.current_round > 4:
                 post_train_metrics = self.validator.run(self.model, data_loader)
                 for k, v in post_train_metrics.items():
                     self.logger.add_scalar(
                         f"Post-Train Train {k}",
                         v,
-                        self.current_step / self.gradient_accumulation_steps
+                        self.current_step / self.gradient_accumulation_steps,
                     )
 
 
@@ -555,13 +595,19 @@ def get_trainer(method, config, class_weights, **kwargs):
     elif method == "fedbn":
         return PartPrivateTrainer(config, class_weights, private_layers=["bn"])
     elif method == "fedattn":
-        return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
+        return PartPrivateTrainer(
+            config, class_weights, private_layers=["attn", "se"]
+        )
     elif method == "fedper":
-        return PartPrivateTrainer(config, class_weights, private_layers=["head.fc"])
+        return PartPrivateTrainer(
+            config, class_weights, private_layers=["head.fc"]
+        )
     elif method == "scaffold":
         trainer = ScaffoldTrainer(config, class_weights)
         exclude_vars = ["num_batches_tracked"]
-        trainer.scaffold_helper.init(model=kwargs['model'], exclude_vars=exclude_vars)
+        trainer.scaffold_helper.init(
+            model=kwargs["model"], exclude_vars=exclude_vars
+        )
         return trainer
     elif method == "ditto":
         trainer = None

@@ -1,5 +1,5 @@
 {
-    "name": "",
+    "name": "chest_federated_resnet_50_supervised_50_0.0005_400_fed_isic_fedavg",
     "resource_spec": {},
     "deploy_map": {
         "chest_federated": [

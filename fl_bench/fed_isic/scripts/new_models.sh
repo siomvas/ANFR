@@ -11,7 +11,7 @@ scheduler=onecycle
 optim_resume=resume
 steps_or_epochs=steps
 steps=200
-rounds=20
+rounds=80
 lr=5e-4
 
 grad_clipping_type=none
@@ -20,9 +20,9 @@ batch_size=64
 
 for method in fedopt; do
     for grad_clipping_type in none; do
-        for model_name in nf_resnet50_pretrained; do
+        for model_name in seresnet_50_supervised; do
 
-            name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_short"
+            name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}"
             target_config=${algorithms_dir}/fed_isic_${config}
 
             python3 /path/to/FL_bench/fl_bench/fed_isic/src/setup.py \

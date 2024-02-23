@@ -2,7 +2,7 @@ conda activate flare
 RESULT_ROOT=/path/to/sharedscratch/miccai23/fed_isic
 algorithms_dir="/path/to/FL_bench/fl_bench/fed_isic/job_configs"
 
-config=federated
+config=federated_per
 
 seed=24
 gpu=0,0,0,0,0,0
@@ -11,18 +11,18 @@ scheduler=onecycle
 optim_resume=resume
 steps_or_epochs=steps
 steps=200
-rounds=20
+rounds=80
 lr=5e-4
 
 grad_clipping_type=none
 grad_clipping_value=1.0
 batch_size=64
 
-for method in fedopt; do
-    for grad_clipping_type in none norm; do
-        for model_name in seresnet_50_supervised; do
+for method in fedper; do
+    for grad_clipping_type in none; do
+        for model_name in resnet_50_pretrained_timm nf_resnet50_supervised seresnet_50_supervised resnet50_gn_supervised; do
 
-            name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_short"
+            name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}"
             target_config=${algorithms_dir}/fed_isic_${config}
 
             python3 /path/to/FL_bench/fl_bench/fed_isic/src/setup.py \

@@ -1,7 +1,7 @@
 from copy import deepcopy
 from pathlib import Path, PurePath
 from typing import Any, Dict, List, Optional
-
+import os
 import torch
 import torch.nn as nn
 from lightly.utils.scheduler import CosineWarmupScheduler
@@ -303,8 +303,8 @@ class PartPrivateTrainer(BaseTrainer):
 
     """
 
-    def __init__(self, config: Dict, private_layers: List[str]):
-        super().__init__(config)
+    def __init__(self, config: Dict, class_weights, private_layers: List[str]):
+        super().__init__(config, class_weights)
         self.private_layers = private_layers
         self.private_layer_state = None
         self.interp_method = config['interp_method']
@@ -314,7 +314,7 @@ class PartPrivateTrainer(BaseTrainer):
         self.opt_state = deepcopy(self.opt.state_dict()) if self.optim_resume == "resume" else None
         self.sch_state = deepcopy(self.sch.state_dict())
 
-        self.private_layers_state = {}
+        self.private_layer_state = {}
         # head.fc for fedper, bn for fedbn, attn for fedattn
         for k, v in self.model.state_dict().items():
             if any(subname in k for subname in self.private_layers):
@@ -356,38 +356,50 @@ class PartPrivateTrainer(BaseTrainer):
 
         final_dict = {}
         if self.private_layer_state is not None:
-            if self.interp_method is None:
+            if self.interp_method:
+                if self.interp_method == 'linear':
+                    # Shared -> Private
+                    interp_ratio = self.current_step / self.max_steps
+                elif self.interp_method == 'inverse_linear':
+                    # Private -> Shared
+                    interp_ratio = 1 - self.current_step / self.max_steps
+                elif self.interp_method == 'fixbn':
+                    if self.current_step < self.max_steps / 2:
+                        interp_ratio = 0
+                    else:
+                        interp_ratio = 1
+                elif self.interp_method == 'const':
+                    self.log_info(fl_ctx, f'Round {self.current_round}: interp method is const')
+                    interp_ratio = 0.5
+
+                for k, v in self.private_layer_state.items():
+                    shared_model_value = model.state_dict()[k]
+                    final_dict[k] = v * interp_ratio + shared_model_value * (1 - interp_ratio)
+            else:
                 final_dict = deepcopy(self.private_layer_state)
-            elif self.interp_method == 'linear':
-                # Shared -> Private
-                interp_ratio = self.current_step / self.max_steps
-            elif self.interp_method == 'inverse_linear':
-                # Private -> Shared
-                interp_ratio = 1 - self.current_step / self.max_steps
-            elif self.interp_method == 'fixbn':
-                if self.current_step < self.max_steps / 2:
-                    interp_ratio = 0
-                else:
-                    interp_ratio = 1
-            elif self.interp_method == 'const':
-                self.log_info(fl_ctx, f'Round {self.current_round}: interp method is const')
-                interp_ratio = 0.5
-
-            for k, v in self.private_layer_state.items():
-                shared_model_value = model.state_dict()[k]
-                final_dict[k] = v * interp_ratio + shared_model_value * (1 - interp_ratio)
-
+            self.log_info(fl_ctx, f"Loading {list(final_dict.keys())} into model")
             model.load_state_dict(final_dict, strict=False)
 
         return model
 
-    def run(self, model, data_loader, num_steps, device="cuda:0", logger=None,
-        abort_signal=None, fl_ctx=None):
-        self.setup(model, logger, abort_signal)
+    def run(
+        self,
+        model: nn.Module,
+        data_loader: DataLoader,
+        num_steps: int,
+        device: str = "cuda:0",
+        logger: Optional[SummaryWriter] = None,
+        abort_signal: Optional[Any] = None,
+        fl_ctx=None
+    ):
+
+        self.setup(model, logger, data_loader, num_steps, abort_signal)
         # different from base trainer,
         # forces a load_checkpoint to restore the private layers
         if self.current_round > 0:
-            self.model = self.load_checkpoint("models/last.pt", model, fl_ctx)
+            self.log_info(fl_ctx, f"Attempting to load checkpoint, current_round is {self.current_round}")
+            if os.path.exists("models/last.pt"):
+                self.model = self.load_checkpoint("models/last.pt", model, fl_ctx)
         # Run training
         self.model.train()
         self.training_loop(data_loader, num_steps)
@@ -549,7 +561,7 @@ def get_trainer(method, config, class_weights, **kwargs):
     elif method == "fedattn":
         return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
     elif method == "fedper":
-        return PartPrivateTrainer(config, class_weights, private_layers=["head.fc"])
+        return PartPrivateTrainer(config, class_weights, private_layers=["fc"])
     elif method == "scaffold":
         trainer = ScaffoldTrainer(config, class_weights)
         exclude_vars = ["num_batches_tracked"]

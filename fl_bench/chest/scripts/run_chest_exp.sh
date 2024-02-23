@@ -1,29 +1,31 @@
 conda activate flare
-RESULT_ROOT=/path/to/sharedscratch/miccai23_chest
+RESULT_ROOT=/path/to/sharedscratch/miccai23/cxr14
 algorithms_dir="/path/to/FL_bench/fl_bench/chest/job_configs"
 
 seed=2024
 config=federated
-num_clients=8
-gpu=0,0,0,0,0,0,0,0
+num_clients=4
+gpu=0,0,1,1
 
 method=fedavg
-rounds=150
+rounds=50
 
-scheduler=none
+scheduler=onecycle
 optim_resume=resume
-steps_or_epochs=epochs
-steps=1
-lr=1e-3
+steps_or_epochs=steps
+steps=400
+lr=5e-4
 
-batch_size=1
-cache_rate=1.0
+batch_size=64
+cache_rate=0.5
 grad_clipping_type=none
 
-for optim_resume in restart; do
-    for model_name in unet_resnet50_dbn_pretrained unet_nf_resnet50_pretrained deeplabv3_resnet50_pretrained; do
+criterion=bce
 
-        name="${model_name}_new_w_amp_no_clip"
+for method in fedavg; do
+    for model_name in resnet_50_supervised; do
+
+        name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_${criterion}"
         target_config=${algorithms_dir}/chest_${config}
 
         python3 /path/to/FL_bench/fl_bench/chest/src/setup.py \
@@ -33,6 +35,7 @@ for optim_resume in restart; do
         -lr ${lr} \
         --batch_size ${batch_size} \
         --cache_rate ${cache_rate} \
+        --criterion ${criterion} \
         --grad_clipping_type ${grad_clipping_type} \
         --scheduler ${scheduler} \
         --optim_resume ${optim_resume} \

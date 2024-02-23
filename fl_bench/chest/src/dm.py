@@ -22,7 +22,7 @@ def seed_worker(worker_id):
     random.seed(worker_seed)
 
 
-class ChestDataModule():
+class ChestDataModule:
     def __init__(
         self,
         data_dir: str,
@@ -30,7 +30,7 @@ class ChestDataModule():
         central: bool,
         batch_size: int = 64,
         cache_rate: float = 1.0,
-        seed: int = 0
+        seed: int = 0,
     ):
         self.seed = seed
         seed_everything(seed)
@@ -51,7 +51,7 @@ class ChestDataModule():
         #     T.ScaleIntensityd(keys=["image"]),
         #     T.HistogramNormalized(keys=["image"], min=0, max=1),
         #     T.RandFlipd(keys=["image"], spatial_axis=1, prob=0.5),
-        #     T.RandZoomd(keys=["image"], min_zoom=0.9, max_zoom=1.1, prob=0.5),
+        #     T.RandZoomd(keys=["image"],min_zoom=0.9, max_zoom=1.1, prob=0.5),
         #     T.RandRotated(keys=["image"], range_x=np.pi/18, prob=0.5),
         #     T.EnsureTyped(keys=["image", "label"]),
         # ])
@@ -72,55 +72,78 @@ class ChestDataModule():
         # ])
 
         # switch to preprocessed data for faster training
-        self.transform_train = Compose([
-            T.LoadImaged(
-                reader="PILReader",
-                keys=["image"],
-                image_only=True,
-                ensure_channel_first=True,
-                reverse_indexing=False
-            ),
-            T.ScaleIntensityd(keys=["image"]),
-            T.HistogramNormalized(keys=["image"], min=0, max=1),
-            T.RandFlipd(keys=["image"], spatial_axis=1, prob=0.5),
-            T.RandZoomd(keys=["image"], min_zoom=0.9, max_zoom=1.1, prob=0.5),
-            T.RandRotated(keys=["image"], range_x=np.pi/18, prob=0.5),
-            T.EnsureTyped(keys=["image", "label"]),
-        ])
+        self.transform_train = Compose(
+            [
+                T.LoadImaged(
+                    reader="PILReader",
+                    keys=["image"],
+                    image_only=True,
+                    ensure_channel_first=True,
+                    reverse_indexing=False,
+                ),
+                T.ScaleIntensityd(keys=["image"]),
+                T.HistogramNormalized(keys=["image"], min=0, max=1),
+                T.RandFlipd(keys=["image"], spatial_axis=1, prob=0.5),
+                T.RandZoomd(
+                    keys=["image"], min_zoom=0.9, max_zoom=1.1, prob=0.5
+                ),
+                T.RandRotated(keys=["image"], range_x=np.pi / 18, prob=0.5),
+                T.EnsureTyped(keys=["image", "label"]),
+            ]
+        )
 
-        self.transform_valid = Compose([
-            T.LoadImaged(
-                reader="PILReader",
-                keys=["image"],
-                image_only=True,
-                ensure_channel_first=True,
-                reverse_indexing=False
-            ),
-            T.ScaleIntensityd(keys=["image"]),
-            T.HistogramNormalized(keys=["image"], min=0, max=1),
-            T.EnsureTyped(keys=["image", "label"]),
-        ])
+        self.transform_valid = Compose(
+            [
+                T.LoadImaged(
+                    reader="PILReader",
+                    keys=["image"],
+                    image_only=True,
+                    ensure_channel_first=True,
+                    reverse_indexing=False,
+                ),
+                T.ScaleIntensityd(keys=["image"]),
+                T.HistogramNormalized(keys=["image"], min=0, max=1),
+                T.EnsureTyped(keys=["image", "label"]),
+            ]
+        )
 
         # dataset_dir = os.path.join(data_dir, "images")
         dataset_dir = os.path.join(data_dir, "images_224")
-        datalist_paths = os.path.join(data_dir, "datalists", f"seed_{self.seed}")
+        datalist_paths = os.path.join(
+            data_dir, "datalists", f"seed_{self.seed}"
+        )
 
         if central:
             client_datalist = os.path.join(datalist_paths, "central.json")
         else:
-            client_datalist = os.path.join(datalist_paths, client_idx + ".json")
+            client_datalist = os.path.join(
+                datalist_paths, client_idx + ".json"
+            )
+
+        # read the class counts from the summary file
+        summary_file = os.path.join(datalist_paths, "summary.txt")
+        with open(summary_file, "r") as f:
+            summary = f.read()
+        class_counts = json.loads(summary.split("Class counts for each client: \n")[1])
+        class_counts = class_counts[client_idx]
+        class_counts = list(class_counts.values())
+        self.weights = class_counts[:-1]
+        num_samples = class_counts[-1]
+
+        self.weights = num_samples / (np.array(self.weights) + 1e-6) - 1
+
 
         self.train_list = load_decathlon_datalist(
             data_list_file_path=client_datalist,
             is_segmentation=False,
             data_list_key="training",
-            base_dir=dataset_dir
+            base_dir=dataset_dir,
         )
         self.valid_list = load_decathlon_datalist(
             data_list_file_path=client_datalist,
             is_segmentation=False,
             data_list_key="validation",
-            base_dir=dataset_dir
+            base_dir=dataset_dir,
         )
 
         self.setup()
@@ -132,30 +155,34 @@ class ChestDataModule():
                 data=self.train_list,
                 transform=self.transform_train,
                 cache_rate=self.cache_rate,
-                num_workers=4,
+                num_workers=6,
             )
             self.valid_dataset = CacheDataset(
                 data=self.valid_list,
                 transform=self.transform_valid,
                 cache_rate=self.cache_rate,
-                num_workers=4,
+                num_workers=6,
             )
         else:
-            self.train_dataset = Dataset(data=self.train_list, transform=self.transform_train)
-            self.valid_dataset = Dataset(data=self.valid_list, transform=self.transform_valid)
+            self.train_dataset = Dataset(
+                data=self.train_list, transform=self.transform_train
+            )
+            self.valid_dataset = Dataset(
+                data=self.valid_list, transform=self.transform_valid
+            )
 
         g = torch.Generator()
         g.manual_seed(self.seed)
 
         self.train_dataloader = DataLoader(
-            self.train_dataset, batch_size=self.batch_size,
-            num_workers=4, worker_init_fn=seed_worker,
-            generator=g
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=6,
+            worker_init_fn=seed_worker,
+            generator=g,
         )
         self.val_dataloader = DataLoader(
-            self.valid_dataset, batch_size=10,
-            shuffle=False,
-            num_workers=2
+            self.valid_dataset, batch_size=100, shuffle=False, num_workers=6
         )
 
     def teardown(self):
@@ -169,28 +196,33 @@ class ChestSplitter(FLComponent):
     def __init__(
         self,
         dataset: str,
-        data_dir: str,
+        hyperion: bool,
         split_dir: str = "datalists",
-        num_sites: int = 6,
+        num_sites: int = 4,
         seed: int = 0,
     ):
         super().__init__()
         self.dataset = dataset
-        self.data_dir = data_dir
+        if hyperion:
+            self.data_dir = os.getenv(f"HYPERION_{dataset}_ROOT")
+        else:
+            self.data_dir = os.getenv(f"{dataset}_ROOT")
         self.split_dir = split_dir
         self.num_sites = num_sites
         self.seed = seed
-        self.dest_path = os.path.join(self.data_dir, self.split_dir, f"seed_{self.seed}")
+        self.dest_path = os.path.join(
+            self.data_dir, self.split_dir, f"seed_{self.seed}"
+        )
 
         seed_everything(seed)
 
     def handle_event(self, event_type, fl_ctx):
         if event_type == EventType.START_RUN:
-            # if the split directory with this seed split_dir_seed={seed} already exists, skip the split
+            # if the split directory with this seed exists, skip the split
             if os.path.isdir(self.dest_path):
                 self.log_info(
                     fl_ctx,
-                    f"Split directory {self.dest_path} already exists, skipping the split.",
+                    f"Directory {self.dest_path} exists, skipping the split.",
                 )
                 return
 
@@ -201,7 +233,8 @@ class ChestSplitter(FLComponent):
         if fl_ctx:
             self.log_info(
                 fl_ctx,
-                f"Partitioning {self.dataset} training set into {self.num_sites} with seed = {self.seed}",
+                f"Partitioning {self.dataset} training set \
+                    into {self.num_sites} with seed = {self.seed}",
             )
 
         os.makedirs(self.dest_path, exist_ok=True)
@@ -228,10 +261,14 @@ class ChestSplitter(FLComponent):
             data.drop(columns=["Finding Labels"], inplace=True)
 
             # filter the training/test rows
-            train_list = pd.read_csv(os.path.join(self.data_dir, "train_val_list.txt"), header=None)[0].to_list()
-            train_data = data[data['Image Index'].isin(train_list)]
-            valid_list = pd.read_csv(os.path.join(self.data_dir, "test_list.txt"), header=None)[0].to_list()
-            valid_data = data[data['Image Index'].isin(valid_list)]
+            train_list = pd.read_csv(
+                os.path.join(self.data_dir, "train_val_list.txt"), header=None
+            )[0].to_list()
+            train_data = data[data["Image Index"].isin(train_list)]
+            valid_list = pd.read_csv(
+                os.path.join(self.data_dir, "test_list.txt"), header=None
+            )[0].to_list()
+            valid_data = data[data["Image Index"].isin(valid_list)]
 
             # get the unique patient IDs for the training set
             patients = train_data["Patient ID"].unique()
@@ -262,13 +299,15 @@ class ChestSplitter(FLComponent):
             # get the class counts for each site
             class_sum = {}
             for i, site in enumerate(site_idx):
-                class_sum[i] = data[data["Patient ID"].isin(site)].iloc[:, 12:].sum().to_dict()
+                class_sum[f"site-{i+1}"] = (
+                    data[data["Patient ID"].isin(site)].iloc[:, 2:].sum().to_dict()
+                )
                 # add the number of samples to the summary, which is the number
                 # of patients multiplied by the number of images per patient
                 cnt = 0
                 for patient in site:
                     cnt += len(data[data["Patient ID"] == patient])
-                class_sum[i]["samples"] = cnt
+                class_sum[f"site-{i+1}"]["samples"] = cnt
 
             return class_sum
         else:
