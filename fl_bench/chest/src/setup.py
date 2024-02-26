@@ -13,40 +13,62 @@ def main():
     parser.add_argument("-local_steps", type=int, default=argparse.SUPPRESS)
     parser.add_argument("-lr", type=float, default=argparse.SUPPRESS)
     parser.add_argument(
-        "--opt_args", type=str, default=argparse.SUPPRESS, help="optimizer arguments, pass as 'k:v, k:v'"
+        "--opt_args",
+        type=str,
+        default=argparse.SUPPRESS,
+        help="optimizer arguments, pass as 'k:v, k:v'",
     )
-    parser.add_argument("--scheduler", type=str, default="onecycle", choices=["none", "warmcosine", "cosine", "onecycle"])
-    parser.add_argument("--steps_or_epochs", type=str, default="steps", choices=["steps", "epochs"])
+    parser.add_argument(
+        "--scheduler",
+        type=str,
+        default="onecycle",
+        choices=["none", "warmcosine", "cosine", "onecycle"],
+    )
+    parser.add_argument(
+        "--steps_or_epochs", type=str, default="steps", choices=["steps", "epochs"]
+    )
     parser.add_argument("-seed", type=int, default=222)
-    parser.add_argument("--optim_resume", type=str, default="restart", choices=["restart", "resume"])
+    parser.add_argument(
+        "--optim_resume", type=str, default="restart", choices=["restart", "resume"]
+    )
     parser.add_argument("--criterion", type=str, default="bce", choices=["bce", "fl"])
     parser.add_argument("--cache_rate", type=float, default=1.0)
-    parser.add_argument("--dataset", type=str, default="CXR14", choices=["CXR14", "CXP", "COMBO"])
     parser.add_argument("--fedprox_mu", type=float, default=0.0)
-    parser.add_argument("--grad_clipping_type", type=str, default="norm", choices=["none", "norm", "value"])
+    parser.add_argument(
+        "--grad_clipping_type",
+        type=str,
+        default="norm",
+        choices=["none", "norm", "value"],
+    )
     parser.add_argument("--grad_clipping_value", type=float, default=1.0)
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--use_hyperion_dirs", action="store_true")
-    parser.add_argument("--interp_method", type=str, default="", choices=["", "linear", "inverse_linear", "fixbn", "const"])
+    parser.add_argument(
+        "--interp_method",
+        type=str,
+        default="",
+        choices=["", "linear", "inverse_linear", "fixbn", "const"],
+    )
     parser.add_argument("--batch_size", type=int, default=64)
 
     args = parser.parse_args()
 
     job_name = os.path.basename(args.job)
-    client_config_filename = os.path.join(args.job, job_name, "config", "config_fed_client.json")
-    server_config_filename = os.path.join(args.job, job_name, "config", "config_fed_server.json")
-    train_config_filename = os.path.join(args.job, job_name, "config", "config_train.json")
+    client_config_filename = os.path.join(
+        args.job, job_name, "config", "config_fed_client.json"
+    )
+    server_config_filename = os.path.join(
+        args.job, job_name, "config", "config_fed_server.json"
+    )
+    train_config_filename = os.path.join(
+        args.job, job_name, "config", "config_train.json"
+    )
     meta_config_filename = os.path.join(args.job, "meta.json")
 
     client_config = read_json(client_config_filename)
     server_config = read_json(server_config_filename)
     train_config = read_json(train_config_filename)
     meta_config = read_json(meta_config_filename)
-
-    # update dataset
-    print(f"Setting dataset = {args.dataset}")
-    server_config["dataset"] = args.dataset
-    train_config["dataset"] = args.dataset
 
     # update model
     print(f"Setting model name = {args.model_name}")
@@ -84,9 +106,13 @@ def main():
 
     # FedOpt requires a different shareable generator
     if args.method == "fedopt":
-        server_config["workflows"][0]["args"]["shareable_generator_id"] = "shareable_generator_fedopt"
+        server_config["workflows"][0]["args"][
+            "shareable_generator_id"
+        ] = "shareable_generator_fedopt"
     else:
-        server_config["workflows"][0]["args"]["shareable_generator_id"] = "shareable_generator_base"
+        server_config["workflows"][0]["args"][
+            "shareable_generator_id"
+        ] = "shareable_generator_base"
 
     # SCAFFOLD requires:
     # 1. A different trainer (automatic change via config)
@@ -101,12 +127,14 @@ def main():
                 "filters": [
                     {
                         "name": "ExcludeVars",
-                        "args": {"exclude_vars": "(?:num_batches_tracked)|(?:attn.relative_position_index)"},
+                        "args": {
+                            "exclude_vars": "(?:num_batches_tracked)|(?:attn.relative_position_index)"
+                        },
                     }
                 ],
             }
         ]
-        server_config["components"][5]["args"]["expected_data_kind"] = {
+        server_config["components"][4]["args"]["expected_data_kind"] = {
             "_model_weights_": "WEIGHT_DIFF",
             "scaffold_c_diff": "WEIGHT_DIFF",
         }
@@ -114,17 +142,17 @@ def main():
 
     else:
         server_config["task_result_filters"] = []
-        server_config["components"][5]["args"]["expected_data_kind"] = "WEIGHT_DIFF"
+        server_config["components"][4]["args"]["expected_data_kind"] = "WEIGHT_DIFF"
         server_config["workflows"][0]["name"] = "ScatterAndGather"
 
     if args.method == "fedattn" or args.method == "fedper":
         # server_config["components"][5]["args"]["exclude_vars"] = "attn|se"
-        server_config["components"][5]["args"]["exclude_vars"] = ""
+        server_config["components"][4]["args"]["exclude_vars"] = ""
     elif args.method == "fedbn":
         # server_config["components"][5]["args"]["exclude_vars"] = "bn"
-        server_config["components"][5]["args"]["exclude_vars"] = ""
+        server_config["components"][4]["args"]["exclude_vars"] = ""
     else:
-        server_config["components"][5]["args"]["exclude_vars"] = ""
+        server_config["components"][4]["args"]["exclude_vars"] = ""
 
     job_name += f"_fed_isic_{args.method}"
     # update seed
@@ -152,15 +180,24 @@ def main():
     server_config = read_json(server_config_filename)
     client_config = read_json(client_config_filename)
     server_config["hyperion"] = True if args.use_hyperion_dirs else False
-    client_config["components"][0]["args"]["hyperion"] = True if args.use_hyperion_dirs else False
+    client_config["components"][0]["args"]["hyperion"] = (
+        True if args.use_hyperion_dirs else False
+    )
     write_json(server_config, server_config_filename)
     write_json(client_config, client_config_filename)
     print(f"Setting hyperion = {args.use_hyperion_dirs}")
 
     misc_optional_args = [
-        "scheduler", "optim_resume", "batch_size", "interp_method",
-        "cache_rate", "fedprox_mu", "grad_clipping_type",
-        "grad_clipping_value", "steps_or_epochs", "criterion"
+        "scheduler",
+        "optim_resume",
+        "batch_size",
+        "interp_method",
+        "cache_rate",
+        "fedprox_mu",
+        "grad_clipping_type",
+        "grad_clipping_value",
+        "steps_or_epochs",
+        "criterion",
     ]
     for arg in misc_optional_args:
         if arg in args:

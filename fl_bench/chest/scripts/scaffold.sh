@@ -1,31 +1,29 @@
 conda activate flare
-RESULT_ROOT=/path/to/sharedscratch/miccai23/cxr14
+RESULT_ROOT=/path/to/sharedscratch/miccai23/chest
 algorithms_dir="/path/to/FL_bench/fl_bench/chest/job_configs"
 
 seed=2024
-config=federated
-num_clients=4
-gpu=0,0,1,1
-
-method=fedavg
-rounds=50
+config=federated_copy
+clients=client_cxr14,client_padchest,client_cxp_young,client_cxp_old
+gpu=0,0,0,0
 
 scheduler=onecycle
 optim_resume=resume
 steps_or_epochs=steps
-steps=400
-lr=5e-4
+steps=500
+rounds=50
+lr=1e-3
 
 batch_size=64
-cache_rate=0.5
+cache_rate=1.0
 grad_clipping_type=none
 
 criterion=bce
 
-for method in fedavg; do
-    for model_name in resnet_50_supervised; do
+for method in scaffold; do
+    for model_name in resnet_50_supervised nf_resnet50_supervised seresnet_50_supervised resnet50_gn_supervised; do
 
-        name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_${criterion}"
+        name="${model_name}_${method}_${lr}_${grad_clipping_type}_${optim_resume}_${criterion}"
         target_config=${algorithms_dir}/chest_${config}
 
         python3 /path/to/FL_bench/fl_bench/chest/src/setup.py \
@@ -47,6 +45,6 @@ for method in fedavg; do
         --use_hyperion_dirs \
         --amp \
 
-        nvflare simulator ${target_config} -w ${RESULT_ROOT}/${name} -n ${num_clients} -gpu ${gpu}
+        nvflare simulator ${target_config} -w ${RESULT_ROOT}/${name} -c ${clients} -gpu ${gpu}
     done
 done

@@ -64,9 +64,9 @@ class ChestLearner(Learner):
         ).to(self.device)
 
         if self.hyperion:
-            data_dir = os.getenv(f"HYPERION_{config_train['dataset']}_ROOT")
+            data_dir = os.getenv("HYPERION_CHEST_ROOT")
         else:
-            data_dir = os.getenv(f"{config_train['dataset']}_ROOT")
+            data_dir = os.getenv("CHEST_ROOT")
 
         self.dm = ChestDataModule(
             data_dir=data_dir,
@@ -178,6 +178,8 @@ class ChestLearner(Learner):
         table = PrettyTable()
         table.field_names = ["Metric", "Value"]
         for m, v in metrics.items():
+            if m == 'optimal_thresholds':
+                continue
             table.add_row([m, v])
             self.writer.add_scalar(f"{m}/Post-Train Val {m}", v, self.trainer.current_step)
         self.log_info(fl_ctx, str(table))
@@ -228,10 +230,7 @@ class ChestLearner(Learner):
         # 2. Prepare dataset
         if validate_type == ValidateType.BEFORE_TRAIN_VALIDATE:
             data_loader = self.dm.val_dataloader
-            # dxo = DXO(data_kind=DataKind.METRICS, data=0)
-            # return dxo.to_shareable()
-            # try to reduce from 3x validations to 2x
-            return make_reply(ReturnCode.OK)
+
         elif validate_type == ValidateType.MODEL_VALIDATE:
             # test set here if used
             data_loader = self.dm.val_dataloader
@@ -288,26 +287,29 @@ class ChestLearner(Learner):
         return dxo.to_shareable()
 
     def get_model_for_validation(self, model_name: str, fl_ctx: FLContext) -> Shareable:
-        if model_name == ModelName.BEST_MODEL:
-            model_data = None
-            try:
+        model_data = None
+        try:
+            if model_name == ModelName.FINAL_MODEL:
+                model_data = torch.load(self.last_model_path, map_location="cpu")
+                self.log_info(fl_ctx, f"Load last model from {self.last_model_path}")
+            elif model_name == ModelName.BEST_MODEL:
                 model_data = torch.load(self.best_model_path, map_location="cpu")
                 self.log_info(fl_ctx, f"Load best model from {self.best_model_path}")
-            except Exception as e:
-                self.log_error(fl_ctx, f"Unable to load best model: {e}")
+        except Exception as e:
+            self.log_error(fl_ctx, f"Unable to load best model: {e}")
 
-            if model_data:
-                data = {}
-                for var_name in model_data["model"]:
-                    data[var_name] = model_data['model'][var_name].numpy()
-                dxo = DXO(data_kind=DataKind.WEIGHTS, data=data)
-                return dxo.to_shareable()
-            else:
-                self.log_error(fl_ctx, f"best local model not available at {self.best_model_path}")
-                return make_reply(ReturnCode.EXECUTION_RESULT_ERROR)
+        if model_data:
+            data = {}
+            for var_name in model_data["model"]:
+                data[var_name] = model_data['model'][var_name].numpy()
+            dxo = DXO(data_kind=DataKind.WEIGHTS, data=data)
+            return dxo.to_shareable()
         else:
-            self.log_error(fl_ctx, f"Unknown model_type {model_name}")
-            return make_reply(ReturnCode.BAD_TASK_DATA)
+            if model_name == ModelName.BEST_MODEL:
+                self.log_error(fl_ctx, f"best local model not available at {self.best_model_path}")
+            else:
+                self.log_error(fl_ctx, f"last local model not available at {self.last_model_path}")
+            return make_reply(ReturnCode.EXECUTION_RESULT_ERROR)
 
     def finalize(self, fl_ctx):
         self.dm.teardown()

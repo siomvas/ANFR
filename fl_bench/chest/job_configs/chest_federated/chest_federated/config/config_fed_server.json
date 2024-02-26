@@ -1,28 +1,16 @@
 {
     "format_version": 2,
     "min_clients": 4,
-    "dataset": "CXR14",
-    "num_rounds": 50,
+    "num_rounds": 40,
     "seed": 2024,
+    "hyperion": true,
     "model_path": "fl_bench.networks.chest_nets.resnet_50_supervised",
-    "TRAIN_SPLIT_ROOT": "datalists",
     "server": {
         "heart_beat_timeout": 600
     },
     "task_data_filters": [],
     "task_result_filters": [],
     "components": [
-        {
-            "id": "data_splitter",
-            "path": "fl_bench.chest.src.dm.ChestSplitter",
-            "args": {
-                "dataset": "{dataset}",
-                "split_dir": "{TRAIN_SPLIT_ROOT}",
-                "num_sites": "{min_clients}",
-                "seed": "{seed}",
-                "hyperion": "{hyperion}"
-            }
-        },
         {
             "id": "persistor",
             "name": "PTFileModelPersistor",
@@ -107,7 +95,10 @@
         {
             "id": "report_generator",
             "path": "fl_bench.utils.report_generator.ReportGenerator",
-            "args": {}
+            "args": {
+                "metric_type": "multi",
+                "metric_name": "mean_auroc"
+            }
         }
     ],
     "workflows": [
@@ -129,6 +120,7 @@
         },
         {
             "id": "cross_site_model_eval",
+            "path": "fl_bench.utils.cross_validation.CrossSiteModelEval",
             "name": "CrossSiteModelEval",
             "args": {
                 "model_locator_id": "model_locator",
@@ -138,6 +130,5 @@
                 "cleanup_models": true
             }
         }
-    ],
-    "hyperion": true
+    ]
 }

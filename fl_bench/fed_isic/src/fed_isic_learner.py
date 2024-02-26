@@ -1,4 +1,3 @@
-import copy
 import json
 import os
 import traceback
@@ -151,7 +150,7 @@ class FedISICLearner(Learner):
                 break
             except Exception as e:
                 if i < self.max_retry:
-                    self.log_warning(fl_ctx, "Something wrong in training, retrying. \n {e}")
+                    self.log_warning(fl_ctx, "Something wrong in training, retrying.")
                     # Restore trainer states to the beginning of the round
                     if os.path.exists(self.last_model_path):
                         self.log_warning(fl_ctx, f"Loading last model from {self.last_model_path}")

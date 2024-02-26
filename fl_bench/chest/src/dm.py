@@ -1,17 +1,15 @@
 import json
 import os
 import random
+from copy import deepcopy
+from multiprocessing.pool import ThreadPool
 
-import monai.transforms as T
+import albumentations as A
 import numpy as np
-import pandas as pd
 import torch
-from monai.data.dataset import CacheDataset, Dataset
-from monai.data.decathlon_datalist import load_decathlon_datalist
-from monai.transforms.compose import Compose
-from nvflare.apis.event_type import EventType
-from nvflare.apis.fl_component import FLComponent
-from torch.utils.data import DataLoader
+from PIL import Image
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
 from fl_bench.utils.misc import seed_everything
 
@@ -33,143 +31,76 @@ class ChestDataModule:
         seed: int = 0,
     ):
         self.seed = seed
-        seed_everything(seed)
+        # seed_everything(seed)
         self.batch_size = batch_size
         self.cache_rate = cache_rate
 
-        # transforms:
-        # self.transform_train = Compose([
-        #     T.LoadImaged(
-        #         reader="PILReader",
-        #         converter=lambda x: x.convert("L"),
-        #         keys=["image"],
-        #         image_only=True,
-        #         ensure_channel_first=True,
-        #         reverse_indexing=False
-        #     ),
-        #     T.Resized(keys=["image"], spatial_size=[224, 224]),
-        #     T.ScaleIntensityd(keys=["image"]),
-        #     T.HistogramNormalized(keys=["image"], min=0, max=1),
-        #     T.RandFlipd(keys=["image"], spatial_axis=1, prob=0.5),
-        #     T.RandZoomd(keys=["image"],min_zoom=0.9, max_zoom=1.1, prob=0.5),
-        #     T.RandRotated(keys=["image"], range_x=np.pi/18, prob=0.5),
-        #     T.EnsureTyped(keys=["image", "label"]),
-        # ])
+        self.transform_train = A.Compose([
+            A.ShiftScaleRotate(
+                shift_limit_x=0.05,
+                shift_limit_y=0.1,
+                border_mode=0,
+                value=np.random.randint(0, 255),
+                scale_limit=0.05,
+                rotate_limit=10,
+                p=0.5,
+            ),
+            A.CoarseDropout(
+                max_holes=3,
+                max_height=50,
+                max_width=50,
+                min_holes=1,
+                min_height=20,
+                min_width=20,
+                fill_value=np.random.randint(0, 255),
+                p=0.5,
+            ),
+            A.RandomCrop(200, 200),
+            A.Resize(224, 224),
+            A.Normalize(mean=0.5, std=0.25, always_apply=True),
+        ])
 
-        # self.transform_valid = Compose([
-        #     T.LoadImaged(
-        #         reader="PILReader",
-        #         converter=lambda x: x.convert("L"),
-        #         keys=["image"],
-        #         image_only=True,
-        #         ensure_channel_first=True,
-        #         reverse_indexing=False
-        #     ),
-        #     T.Resized(keys=["image"], spatial_size=[224, 224]),
-        #     T.ScaleIntensityd(keys=["image"]),
-        #     T.HistogramNormalized(keys=["image"], min=0, max=1),
-        #     T.EnsureTyped(keys=["image", "label"]),
-        # ])
+        self.transform_valid = A.Compose([
+            A.Normalize(mean=0.5, std=0.25, always_apply=True),
+        ])
 
-        # switch to preprocessed data for faster training
-        self.transform_train = Compose(
-            [
-                T.LoadImaged(
-                    reader="PILReader",
-                    keys=["image"],
-                    image_only=True,
-                    ensure_channel_first=True,
-                    reverse_indexing=False,
-                ),
-                T.ScaleIntensityd(keys=["image"]),
-                T.HistogramNormalized(keys=["image"], min=0, max=1),
-                T.RandFlipd(keys=["image"], spatial_axis=1, prob=0.5),
-                T.RandZoomd(
-                    keys=["image"], min_zoom=0.9, max_zoom=1.1, prob=0.5
-                ),
-                T.RandRotated(keys=["image"], range_x=np.pi / 18, prob=0.5),
-                T.EnsureTyped(keys=["image", "label"]),
-            ]
-        )
-
-        self.transform_valid = Compose(
-            [
-                T.LoadImaged(
-                    reader="PILReader",
-                    keys=["image"],
-                    image_only=True,
-                    ensure_channel_first=True,
-                    reverse_indexing=False,
-                ),
-                T.ScaleIntensityd(keys=["image"]),
-                T.HistogramNormalized(keys=["image"], min=0, max=1),
-                T.EnsureTyped(keys=["image", "label"]),
-            ]
-        )
-
-        # dataset_dir = os.path.join(data_dir, "images")
-        dataset_dir = os.path.join(data_dir, "images_224")
-        datalist_paths = os.path.join(
-            data_dir, "datalists", f"seed_{self.seed}"
-        )
-
+        datalist_paths = os.path.join(data_dir, "datalists")
         if central:
-            client_datalist = os.path.join(datalist_paths, "central.json")
+            client_datalist = os.path.join(datalist_paths, "client_All.json")
         else:
             client_datalist = os.path.join(
                 datalist_paths, client_idx + ".json"
             )
 
         # read the class counts from the summary file
-        summary_file = os.path.join(datalist_paths, "summary.txt")
+        summary_file = os.path.join(datalist_paths, client_idx + "_summary.txt")
         with open(summary_file, "r") as f:
             summary = f.read()
-        class_counts = json.loads(summary.split("Class counts for each client: \n")[1])
-        class_counts = class_counts[client_idx]
+        class_counts = json.loads(summary)
         class_counts = list(class_counts.values())
         self.weights = class_counts[:-1]
         num_samples = class_counts[-1]
-
         self.weights = num_samples / (np.array(self.weights) + 1e-6) - 1
 
-
-        self.train_list = load_decathlon_datalist(
-            data_list_file_path=client_datalist,
-            is_segmentation=False,
-            data_list_key="training",
-            base_dir=dataset_dir,
-        )
-        self.valid_list = load_decathlon_datalist(
-            data_list_file_path=client_datalist,
-            is_segmentation=False,
-            data_list_key="validation",
-            base_dir=dataset_dir,
-        )
+        self.train_list = json.load(open(client_datalist, "r"))["training"]
+        self.valid_list = json.load(open(client_datalist, "r"))["validation"]
 
         self.setup()
 
     def setup(self):
 
-        if self.cache_rate > 0.0:
-            self.train_dataset = CacheDataset(
-                data=self.train_list,
-                transform=self.transform_train,
-                cache_rate=self.cache_rate,
-                num_workers=6,
-            )
-            self.valid_dataset = CacheDataset(
-                data=self.valid_list,
-                transform=self.transform_valid,
-                cache_rate=self.cache_rate,
-                num_workers=6,
-            )
-        else:
-            self.train_dataset = Dataset(
-                data=self.train_list, transform=self.transform_train
-            )
-            self.valid_dataset = Dataset(
-                data=self.valid_list, transform=self.transform_valid
-            )
+        self.train_dataset = CacheDataset(
+            data=self.train_list,
+            transform=self.transform_train,
+            cache_rate=self.cache_rate,
+            num_workers=6,
+        )
+        self.valid_dataset = CacheDataset(
+            data=self.valid_list,
+            transform=self.transform_valid,
+            cache_rate=self.cache_rate,
+            num_workers=6,
+        )
 
         g = torch.Generator()
         g.manual_seed(self.seed)
@@ -178,8 +109,8 @@ class ChestDataModule:
             self.train_dataset,
             batch_size=self.batch_size,
             num_workers=6,
-            worker_init_fn=seed_worker,
-            generator=g,
+            # worker_init_fn=seed_worker,
+            # generator=g,
         )
         self.val_dataloader = DataLoader(
             self.valid_dataset, batch_size=100, shuffle=False, num_workers=6
@@ -192,123 +123,80 @@ class ChestDataModule:
         self.val_dataloader = {}
 
 
-class ChestSplitter(FLComponent):
-    def __init__(
-        self,
-        dataset: str,
-        hyperion: bool,
-        split_dir: str = "datalists",
-        num_sites: int = 4,
-        seed: int = 0,
-    ):
-        super().__init__()
-        self.dataset = dataset
-        if hyperion:
-            self.data_dir = os.getenv(f"HYPERION_{dataset}_ROOT")
-        else:
-            self.data_dir = os.getenv(f"{dataset}_ROOT")
-        self.split_dir = split_dir
-        self.num_sites = num_sites
-        self.seed = seed
-        self.dest_path = os.path.join(
-            self.data_dir, self.split_dir, f"seed_{self.seed}"
-        )
+class CacheDataset(Dataset):
 
-        seed_everything(seed)
+    def __init__(self, data, transform, cache_rate=1.0, num_workers=1):
 
-    def handle_event(self, event_type, fl_ctx):
-        if event_type == EventType.START_RUN:
-            # if the split directory with this seed exists, skip the split
-            if os.path.isdir(self.dest_path):
-                self.log_info(
-                    fl_ctx,
-                    f"Directory {self.dest_path} exists, skipping the split.",
+        self.data = data
+        self.transform = transform
+        self.set_rate = cache_rate
+        self.num_workers = num_workers
+        self.cache_num = 0
+        self._cache = []
+        self.set_data(data)
+
+    def set_data(self, data):
+
+        self.data = data
+        lgth = len(self.data)
+        self.cache_num = min(int(lgth * self.set_rate), lgth)
+        indices = list(range(self.cache_num))
+        with ThreadPool(self.num_workers) as p:
+            self._cache = list(
+                tqdm(
+                    p.imap(self._load_cache_item, indices),
+                    total=len(indices),
+                    desc="Loading dataset"
                 )
-                return
-
-            self.split(fl_ctx)
-
-    def split(self, fl_ctx):
-
-        if fl_ctx:
-            self.log_info(
-                fl_ctx,
-                f"Partitioning {self.dataset} training set \
-                    into {self.num_sites} with seed = {self.seed}",
             )
 
-        os.makedirs(self.dest_path, exist_ok=True)
-        class_sum = self._partition_data()
+        return
 
-        sum_file_name = os.path.join(self.dest_path, "summary.txt")
-        with open(sum_file_name, "w") as sum_file:
-            sum_file.write(f"Number of clients: {self.num_sites} \n")
-            sum_file.write(f"Seed: {self.seed} \n")
-            sum_file.write("Class counts for each client: \n")
-            sum_file.write(json.dumps(class_sum))
+    def _load_cache_item(self, idx: int):
+        image_path = self.data[idx]['image']
+        image = np.array(Image.open(image_path))
+        label = self.data[idx]['label']
+        item = {
+            "image": np.ascontiguousarray(image),
+            "label": np.ascontiguousarray(label)
+        }
 
-    def _partition_data(self):
+        return item
 
-        if self.dataset == "CXR14":
-            # load the data csv
-            data = pd.read_csv(
-                os.path.join(self.data_dir, "Data_Entry_2017_v2020.csv"),
-                usecols=["Image Index", "Patient ID", "Finding Labels"],
-            )
-            # encode the labels and filter out all other columns
-            labels = data["Finding Labels"].str.get_dummies(sep="|")
-            data = pd.concat([data, labels], axis=1)
-            data.drop(columns=["Finding Labels"], inplace=True)
+    def _transform(self, index: int):
 
-            # filter the training/test rows
-            train_list = pd.read_csv(
-                os.path.join(self.data_dir, "train_val_list.txt"), header=None
-            )[0].to_list()
-            train_data = data[data["Image Index"].isin(train_list)]
-            valid_list = pd.read_csv(
-                os.path.join(self.data_dir, "test_list.txt"), header=None
-            )[0].to_list()
-            valid_data = data[data["Image Index"].isin(valid_list)]
+        if index % len(self) < self.cache_num:
+            # data has been cached and is a dict
+            data = self._cache[index]
+            # deepcopy so we don't mess with the cache
+            data = deepcopy(data)
+            if self.transform is not None:
+                augmented = self.transform(image=data['image'])
+                image = augmented["image"]
+            image = np.expand_dims(image, 0).astype(np.float32)
 
-            # get the unique patient IDs for the training set
-            patients = train_data["Patient ID"].unique()
-            # shuffle the patients
-            np.random.shuffle(patients)
-            # split the patients into self.num_sites
-            site_idx = np.array_split(patients, self.num_sites)
-
-            # prepare the decathlon datalist json files for each site
-            # with their own training set and the commmon validation set
-            for i, site in enumerate(site_idx):
-                site_list = train_data[train_data["Patient ID"].isin(site)]
-                json_data = {"training": [], "validation": []}
-                valid_list = valid_data
-                for idx, row in site_list.iterrows():
-                    new_item = {}
-                    new_item["image"] = row["Image Index"]
-                    new_item["label"] = row.iloc[2:].values.tolist()
-                    json_data["training"].append(new_item)
-                for idx, row in valid_list.iterrows():
-                    new_item = {}
-                    new_item["image"] = row["Image Index"]
-                    new_item["label"] = row.iloc[2:].values.tolist()
-                    json_data["validation"].append(new_item)
-                with open(f"{self.dest_path}/site-{i+1}.json", "w") as f:
-                    json.dump(json_data, f, indent=4)
-
-            # get the class counts for each site
-            class_sum = {}
-            for i, site in enumerate(site_idx):
-                class_sum[f"site-{i+1}"] = (
-                    data[data["Patient ID"].isin(site)].iloc[:, 2:].sum().to_dict()
-                )
-                # add the number of samples to the summary, which is the number
-                # of patients multiplied by the number of images per patient
-                cnt = 0
-                for patient in site:
-                    cnt += len(data[data["Patient ID"] == patient])
-                class_sum[f"site-{i+1}"]["samples"] = cnt
-
-            return class_sum
+            return {
+                "image": torch.from_numpy(image),
+                "label": torch.tensor(data['label'])
+            }
         else:
-            raise ValueError(f"Unknown dataset: {self.dataset}")
+            # data has not been cached
+            image_path = self.data[index]['image']
+            image = np.array(Image.open(image_path))
+            label = self.data[index]['label']
+
+            if self.transform is not None:
+                augmented = self.transform(image=image)
+                image = augmented["image"]
+            image = np.expand_dims(image, 0).astype(np.float32)
+
+            return {
+                "image": torch.from_numpy(image),
+                "label": torch.tensor(label)
+            }
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, index: int):
+        return self._transform(index)

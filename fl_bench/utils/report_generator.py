@@ -34,12 +34,18 @@ class ReportGenerator(Widget):
         self,
         results_dir: Union[str, Path] = AppConstants.CROSS_VAL_DIR,
         report_path: Union[str, Path] = "cross_val_results_pretty.json",
+        metric_type='single',
+        metric_name=None,
     ):
         super(ReportGenerator, self).__init__()
 
         self.results_dir = Path(results_dir)
         self.report_path = Path(report_path)
         self.final_avg = []
+        self.pfl_avg = []
+        self.order = []
+        self.metric_type = metric_type
+        self.metric_name = metric_name
 
         if self.report_path.suffix not in ReportGenerator.ALLOWED_FILE_EXTENSIONS:
             raise ValueError(f"Report file extension must be be .yaml, .yml, or .json, got {self.report_path.suffix}")
@@ -68,7 +74,30 @@ class ReportGenerator(Widget):
                             {"data_client": data_client, "model_owner": model_owner, "metrics": dxo.data}
                         )
                         if model_owner == "SRV_server":
-                            self.final_avg.append(*dxo.data.values())
+                            self.order.append(data_client)
+                            if self.metric_type == 'specific':
+                                self.final_avg.append(dxo.data[self.metric_name])
+                            elif self.metric_name == 'single':
+                                self.final_avg.append(*dxo.data.values())
+                            elif self.metric_type == 'multi':
+                                nest = {"data_owner": data_client, "metrics": dxo.data}
+                                self.final_avg.append(nest)
+                            else:
+                                self.log_error(
+                                    fl_ctx, f"Unknown metric type {self.metric_type}", fire_event=False
+                                )
+                        elif model_owner == data_client:
+                            if self.metric_type == 'specific':
+                                self.pfl_avg.append(dxo.data[self.metric_name])
+                            elif self.metric_name == 'single':
+                                self.pfl_avg.append(*dxo.data.values())
+                            elif self.metric_type == 'multi':
+                                nest = {"data_owner": data_client, "metrics": dxo.data}
+                                self.pfl_avg.append(nest)
+                            else:
+                                self.log_error(
+                                    fl_ctx, f"Unknown metric type {self.metric_type}", fire_event=False
+                                )
                     else:
                         self.log_error(
                             fl_ctx, f"Expected dxo of kind METRICS but got {dxo.data_kind}", fire_event=False
@@ -89,12 +118,15 @@ class ReportGenerator(Widget):
             if self.report_path.suffix == ".json":
                 with open(output_file_path, "w") as f:
                     f.write("Cross Validation Results \n")
-                    pretty_json_str = pprint.pformat(json.dumps(results), compact=True, indent=4).replace("'", '"')
+                    pretty_json_str = pprint.pformat(json.dumps(results), indent=2)
                     f.write(pretty_json_str)
                     f.write("\n")
+                    f.write("Order \n")
+                    f.write(f'{self.order} \n')
                     f.write("Average Metrics \n")
                     f.write(f'{self.final_avg} \n')
-                    f.write(f'{sum(self.final_avg) / len(self.final_avg)} \n')
+                    f.write("PFL Metrics \n")
+                    f.write(f'{self.pfl_avg} \n')
             else:  # ".yaml" or ".yml"
                 yaml = YAML()
                 with open(output_file_path, "w") as f:

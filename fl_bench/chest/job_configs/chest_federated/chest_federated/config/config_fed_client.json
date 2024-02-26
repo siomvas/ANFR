@@ -1,7 +1,7 @@
 {
     "format_version": 2,
     "client": {
-        "communication_timeout": 180.0
+        "communication_timeout": 120.0
     },
     "executors": [
         {

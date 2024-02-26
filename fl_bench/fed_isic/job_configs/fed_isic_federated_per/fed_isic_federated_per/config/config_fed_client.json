@@ -29,7 +29,7 @@
                 "config_train_name": "config_train.json",
                 "max_retry": 0,
                 "method": "fedper",
-                "seed": 24,
+                "seed": 3,
                 "central": false,
                 "hyperion": true
             }

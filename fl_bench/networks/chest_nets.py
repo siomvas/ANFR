@@ -8,7 +8,7 @@ from fl_bench.utils.misc import seed_everything
 model_dir = "/path/to/model_weights"
 torch.hub.set_dir(model_dir)
 
-NUM_CLASSES = 15
+NUM_CLASSES = 8
 
 
 def resnet_50(seed):
@@ -117,7 +117,8 @@ def resnet50_v2_supervised(seed):
     model = timm.create_model(
         'resnetv2_50.a1h_in1k',
         pretrained=True,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
+        in_chans=1
     )
     os.environ['https_proxy'] = ''
     return model
@@ -129,7 +130,8 @@ def resnet50_gn_supervised(seed):
     model = timm.create_model(
         'resnet50_gn.a1h_in1k',
         pretrained=True,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
+        in_chans=1
     )
     os.environ['https_proxy'] = ''
     return model

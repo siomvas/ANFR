@@ -5,22 +5,15 @@ from sklearn.metrics import (multilabel_confusion_matrix, roc_auc_score,
                              roc_curve)
 from tqdm import tqdm
 
-cls_map_cxr = [
+cls_map = [
     "Atelectasis",
     "Cardiomegaly",
     "Consolidation",
     "Edema",
     "Effusion",
-    "Emphysema",
-    "Fibrosis",
-    "Hernia",
-    "Infiltration",
-    "Mass",
     "No Finding",
-    "Nodule",
-    "Pleural_Thickening",
     "Pneumonia",
-    "Pneumothorax",
+    "Pneumothorax"
 ]
 
 
@@ -56,10 +49,9 @@ class Validator:
                 if logger is not None:
                     for idx in range(y_pred.shape[1]):
                         logger.add_pr_curve(
-                            f"pr_curve_{idx}",
+                            f"pr_curve_disease_{idx}",
                             labels=y[:, idx],
                             predictions=y_pred[:, idx],
-                            global_step=step,
                         )
 
         y_pred_np = y_pred.numpy(force=True)
@@ -69,7 +61,7 @@ class Validator:
 
         for i, score in enumerate(scores):
             mean += score
-            metrics["auroc_" + cls_map_cxr[i]] = score
+            metrics["auroc_" + cls_map[i]] = score
         metrics["mean_auroc"] = mean / len(scores)
 
         # Youden's J statistic
@@ -106,5 +98,6 @@ class Validator:
         metrics["macro_specificity"] = np.mean(specificity)
         metrics["macro_sensitivity"] = np.mean(sensitivity)
         metrics["macro_precision"] = np.mean(precision)
+        metrics["optimal_thresholds"] = optimal_thresholds
 
         return metrics

@@ -28,7 +28,7 @@
             "args": {
                 "config_train_name": "config_train.json",
                 "method": "fedprox",
-                "seed": 24,
+                "seed": 3,
                 "central": false,
                 "hyperion": true
             }
