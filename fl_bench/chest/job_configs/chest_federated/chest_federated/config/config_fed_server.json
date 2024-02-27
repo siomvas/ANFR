@@ -4,7 +4,7 @@
     "num_rounds": 40,
     "seed": 2024,
     "hyperion": true,
-    "model_path": "fl_bench.networks.chest_nets.resnet_50_supervised",
+    "model_path": "fl_bench.networks.chest_nets.nf_resnet50_supervised",
     "server": {
         "heart_beat_timeout": 600
     },

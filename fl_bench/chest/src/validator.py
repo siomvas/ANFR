@@ -98,6 +98,6 @@ class Validator:
         metrics["macro_specificity"] = np.mean(specificity)
         metrics["macro_sensitivity"] = np.mean(sensitivity)
         metrics["macro_precision"] = np.mean(precision)
-        metrics["optimal_thresholds"] = optimal_thresholds
+        metrics["optimal_thresholds"] = list(optimal_thresholds)
 
         return metrics

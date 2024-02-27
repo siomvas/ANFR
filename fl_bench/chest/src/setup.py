@@ -38,7 +38,7 @@ def main():
         "--grad_clipping_type",
         type=str,
         default="norm",
-        choices=["none", "norm", "value"],
+        choices=["none", "norm", "agc"],
     )
     parser.add_argument("--grad_clipping_value", type=float, default=1.0)
     parser.add_argument("--amp", action="store_true")

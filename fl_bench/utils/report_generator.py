@@ -77,7 +77,7 @@ class ReportGenerator(Widget):
                             self.order.append(data_client)
                             if self.metric_type == 'specific':
                                 self.final_avg.append(dxo.data[self.metric_name])
-                            elif self.metric_name == 'single':
+                            elif self.metric_type == 'single':
                                 self.final_avg.append(*dxo.data.values())
                             elif self.metric_type == 'multi':
                                 nest = {"data_owner": data_client, "metrics": dxo.data}

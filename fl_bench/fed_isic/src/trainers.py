@@ -1,7 +1,7 @@
 from copy import deepcopy
 from pathlib import Path, PurePath
 from typing import Any, Dict, List, Optional
-import os
+
 import torch
 import torch.nn as nn
 from lightly.utils.scheduler import CosineWarmupScheduler
@@ -14,9 +14,13 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 from tqdm import tqdm
-
-from fl_bench.prostate_2d.src.utils import AGC
-from fl_bench.utils.AltScaffoldHelper import AltScaffoldHelper, get_lr_values
+import os
+from timm.utils.agc import adaptive_clip_grad
+from fl_bench.utils.AltScaffoldHelper import (
+    AltScaffoldHelper,
+    DittoHelper,
+    get_lr_values,
+)
 
 from .utils import WeightedFocalLoss
 from .validator import Validator
@@ -81,15 +85,6 @@ class BaseTrainer(FLComponent):
             self.model.parameters(), lr=self.lr, **self.optimizer_dict
         )
         self.optimizer_dict["class"] = optimizer_class
-
-        # If using AGC, wrap the optimizer
-        if self.grad_clipping_type == "agc":
-            self.opt = AGC(
-                self.model.parameters(),
-                self.opt,
-                lamda=self.grad_clipping_value,
-                model=self.model,
-            )
 
         # Load optimizer state
         if (self.opt_state is not None) and (self.optim_resume == "resume"):
@@ -180,6 +175,12 @@ class BaseTrainer(FLComponent):
                             self.model.parameters(),
                             max_norm=self.grad_clipping_value,
                             norm_type=2.0,
+                        )
+                    elif self.grad_clipping_type == "agc":
+                        self.scaler.unscale_(self.opt)
+                        adaptive_clip_grad(
+                            self.model.parameters(),
+                            self.grad_clipping_value,
                         )
 
                     # Apply gradient
@@ -274,7 +275,7 @@ class BaseTrainer(FLComponent):
         }
         torch.save(ckpt, str(path))
 
-    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx=None) -> nn.Module:
+    def load_checkpoint(self, path: str, model: nn.Module, fl_ctx=None):
 
         ckpt = torch.load(path)
 
@@ -455,7 +456,7 @@ class PartPrivateTrainer(BaseTrainer):
         if self.current_round > 0:
             self.log_info(
                 fl_ctx,
-                f"Attempting to load checkpoint, current_round is {self.current_round}",
+                f"Loading checkpoint, round {self.current_round}",
             )
             if os.path.exists("models/last.pt"):
                 self.model = self.load_checkpoint("models/last.pt", model, fl_ctx)
@@ -564,6 +565,12 @@ class ScaffoldTrainer(BaseTrainer):
                             self.model.parameters(),
                             max_norm=self.grad_clipping_value,
                             norm_type=2.0,
+                        )
+                    elif self.grad_clipping_type == "agc":
+                        self.scaler.unscale_(self.opt)
+                        adaptive_clip_grad(
+                            self.model.parameters(),
+                            self.grad_clipping_value,
                         )
 
                     # Apply gradient
