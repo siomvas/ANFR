@@ -78,6 +78,12 @@ class ChestLearner(Learner):
         )
 
         self.class_weights = torch.FloatTensor(self.dm.weights).to(self.device)
+        # initialize bias of classification layer
+        # to the log of the inverse class frequency
+        if "nf" in config_train["model_name"]:
+            self.model.head.fc.bias.data = -torch.log(self.class_weights)
+        else:
+            self.model.fc.bias.data = -torch.log(self.class_weights)
         self.local_steps = config_train["local_steps"]
         self.key_metric = "mean_auroc"
         self.best_metric = 0.0

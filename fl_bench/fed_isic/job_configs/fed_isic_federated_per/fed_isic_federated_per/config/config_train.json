@@ -4,7 +4,7 @@
     "batch_size": 64,
     "max_steps": 16000,
     "scheduler": "onecycle",
-    "model_name": "resnet50_gn_supervised",
+    "model_name": "seresnet_50_supervised",
     "optimizer_args": {
         "class": "Adam"
     },

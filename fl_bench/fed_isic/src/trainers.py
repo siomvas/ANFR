@@ -329,7 +329,7 @@ class PartPrivateTrainer(BaseTrainer):
         self.private_layers = private_layers
         self.private_layer_state = None
         self.interp_method = config["interp_method"]
-        self.exclude_vars = exclude_vars
+        self.exclude_vars = exclude_vars if exclude_vars is not None else []
         self.str_meth = str_meth
 
     def setup(self, model, logger, data_loader, num_steps, abort_signal):
@@ -635,7 +635,8 @@ def get_trainer(method, config, class_weights, **kwargs):
     if method in ["fedavg", "fedprox", "fedopt"]:
         return BaseTrainer(config, class_weights)
     elif method == "fedbn":
-        return PartPrivateTrainer(config, class_weights, private_layers=["bn"])
+        return PartPrivateTrainer(
+            config, class_weights, private_layers=["bn"])
     elif method == "fedattn":
         return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
     elif method == "fedper":

@@ -2,9 +2,9 @@
     "format_version": 2,
     "min_clients": 6,
     "num_rounds": 80,
-    "seed": 3,
+    "seed": 1,
     "hyperion": true,
-    "model_path": "fl_bench.networks.fed_isic_nets.resnet50_gn_supervised",
+    "model_path": "fl_bench.networks.fed_isic_nets.seresnet_50_supervised",
     "server": {
         "heart_beat_timeout": 600
     },
@@ -117,6 +117,7 @@
         },
         {
             "id": "cross_site_model_eval",
+            "path": "fl_bench.utils.cross_validation.CrossSiteModelEval",
             "name": "CrossSiteModelEval",
             "args": {
                 "model_locator_id": "model_locator",

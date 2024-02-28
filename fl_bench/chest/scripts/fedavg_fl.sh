@@ -5,7 +5,7 @@ algorithms_dir="/path/to/FL_bench/fl_bench/chest/job_configs"
 seed=2024
 config=federated
 clients=client_cxr14,client_padchest,client_cxp_young,client_cxp_old
-gpu=0,0,0,0
+gpu=1,1,1,1
 
 scheduler=onecycle
 optim_resume=resume
@@ -17,17 +17,16 @@ lr=1e-3
 batch_size=64
 cache_rate=1.0
 grad_clipping_type=none
-
 criterion=bce
 
 
-for lr in 1e-3 1e-4; do
-    for grad_clipping_type in none norm; do
+for lr in 1e-3; do
+    for grad_clipping_type in none; do
         for criterion in fl; do
             for method in fedavg; do
-                for model_name in resnet_50_supervised nf_resnet50_supervised; do
+                for model_name in resnet_50_supervised; do
 
-                    name="${model_name}_${method}_${lr}_${grad_clipping_type}_${rounds}_${optim_resume}_${criterion}"
+                    name="${model_name}_${method}_${lr}_${grad_clipping_type}_${rounds}_${optim_resume}_${criterion}_speed_bench"
                     target_config=${algorithms_dir}/chest_${config}
 
                     python3 /path/to/FL_bench/fl_bench/chest/src/setup.py \

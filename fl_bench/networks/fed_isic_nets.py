@@ -90,6 +90,7 @@ def resnet_50(seed):
 
 resnet_50_scratch = resnet_50
 
+
 def resnet_50_pretrained_pt(seed):
     seed_everything(seed)
     os.environ['https_proxy'] = 'http://proxy.example.org:3128'
@@ -99,7 +100,6 @@ def resnet_50_pretrained_pt(seed):
     bb.fc = nn.Linear(num_ftrs, NUM_CLASSES)
     return bb
 
-resnet_50_supervised = resnet_50_pretrained_pt
 
 def resnet_50_pretrained_ssl(seed):
     seed_everything(seed)
@@ -130,6 +130,7 @@ def resnet_50_pretrained_timm(seed):
     return bb
 
 
+resnet_50_supervised = resnet_50_pretrained_timm
 resnet_50_pretrained = resnet_50_pretrained_timm
 
 

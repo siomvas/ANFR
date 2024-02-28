@@ -23,7 +23,7 @@ for seed in 2 3; do
     for grad_clipping_type in none; do
         for method in fedprox; do
             for fedprox_mu in 0.01; do
-                for model_name in nf_resnet50_supervised seresnet_50_supervised resnet50_gn_supervised resnet_50_pretrained_timm; do
+                for model_name in nf_resnet50_supervised seresnet_50_supervised resnet50_gn_supervised resnet50_gn_supervised; do
 
                     name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_${fedprox_mu}_seed_${seed}"
                     target_config=${algorithms_dir}/fed_isic_${config}

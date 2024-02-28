@@ -1,0 +1,9 @@
+{
+    "name": "medmnist_central_vit_b_16_pretrained_ssl_5_0.01_4000_alpha-1.0_medmnist_fedavg",
+    "deploy_map": {
+        "colon_central": [
+            "@ALL"
+        ]
+    },
+    "min_clients": 1
+}

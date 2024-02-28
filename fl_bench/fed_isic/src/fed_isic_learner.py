@@ -145,7 +145,7 @@ class FedISICLearner(Learner):
                     num_steps=self.local_steps,
                     logger=self.writer,
                     device=self.device,
-                    fl_ctx=fl_ctx
+                    fl_ctx=fl_ctx,
                 )
                 break
             except Exception as e:
@@ -287,13 +287,17 @@ class FedISICLearner(Learner):
         return dxo.to_shareable()
 
     def get_model_for_validation(self, model_name: str, fl_ctx: FLContext) -> Shareable:
-        if model_name == ModelName.BEST_MODEL:
+        if model_name == ModelName.BEST_MODEL or model_name == ModelName.FINAL_MODEL:
             model_data = None
             try:
-                model_data = torch.load(self.best_model_path, map_location="cpu")
-                self.log_info(fl_ctx, f"Load best model from {self.best_model_path}")
+                if model_name == ModelName.FINAL_MODEL:
+                    model_data = torch.load(self.last_model_path, map_location="cpu")
+                    self.log_info(fl_ctx, f"Load final model from {self.last_model_path}")
+                else:
+                    model_data = torch.load(self.best_model_path, map_location="cpu")
+                    self.log_info(fl_ctx, f"Load best model from {self.best_model_path}")
             except Exception as e:
-                self.log_error(fl_ctx, f"Unable to load best model: {e}")
+                self.log_error(fl_ctx, f"Unable to load model: {e}")
 
             if model_data:
                 data = {}
@@ -302,7 +306,7 @@ class FedISICLearner(Learner):
                 dxo = DXO(data_kind=DataKind.WEIGHTS, data=data)
                 return dxo.to_shareable()
             else:
-                self.log_error(fl_ctx, f"best local model not available at {self.best_model_path}")
+                self.log_error(fl_ctx, "local model not available")
                 return make_reply(ReturnCode.EXECUTION_RESULT_ERROR)
         else:
             self.log_error(fl_ctx, f"Unknown model_type {model_name}")
