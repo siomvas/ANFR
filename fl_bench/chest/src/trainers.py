@@ -105,7 +105,7 @@ class BaseTrainer(FLComponent):
                 self.opt,
                 warmup_epochs=self.max_steps * 0.2,
                 max_epochs=self.max_steps / self.gradient_accumulation_steps,
-                end_value=0.001,
+                end_value=0.1,
             )
         elif self.scheduler_type == "cosine":
             self.sch = CosineAnnealingLR(self.opt, T_max=self.max_steps, eta_min=0.001)
@@ -331,8 +331,26 @@ class PartPrivateTrainer(BaseTrainer):
         self.private_layers = private_layers
         self.private_layer_state = None
         self.interp_method = config["interp_method"]
-        self.exclude_vars = exclude_vars
+        self.exclude_vars = exclude_vars if exclude_vars is not None else []
         self.str_meth = str_meth
+
+    def setup(self, model, logger, data_loader, num_steps, abort_signal):
+
+        self.model = model
+        if self.private_layer_state is not None:
+            self.model.load_state_dict(self.private_layer_state, strict=False)
+        # global model setup for aux losses
+        if self.fedprox_mu > 0:
+            self.global_model = deepcopy(model).eval()
+
+        self.logger = logger
+        if abort_signal is not None:
+            self.abort = abort_signal
+        else:
+            self.abort = None
+
+        if self.steps_or_epochs == "epochs":
+            self.max_steps = len(data_loader) * num_steps
 
         self.configure_optimizer()
 
@@ -619,12 +637,13 @@ def get_trainer(method, config, class_weights, **kwargs):
     if method in ["fedavg", "fedprox", "fedopt"]:
         return BaseTrainer(config, class_weights)
     elif method == "fedbn":
-        return PartPrivateTrainer(config, class_weights, private_layers=["bn"])
+        return PartPrivateTrainer(
+            config, class_weights, private_layers=["bn"])
     elif method == "fedattn":
         return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
     elif method == "fedper":
         return PartPrivateTrainer(
-            config, class_weights, private_layers=["fc"], exclude_vars=["se"]
+            config, class_weights, private_layers=["fc"], exclude_vars=["se", "attn_last"]
         )
     elif method == "scaffold":
         trainer = ScaffoldTrainer(config, class_weights)

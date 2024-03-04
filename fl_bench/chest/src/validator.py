@@ -54,6 +54,18 @@ class Validator:
                             predictions=y_pred[:, idx],
                         )
 
+        # if y or y_pred contain nans, skip all metrics and return a dict with 0 for all metrics
+        if torch.isnan(y).any() or torch.isnan(y_pred).any():
+            for cls in cls_map:
+                metrics["auroc_" + cls] = 0
+            metrics["mean_auroc"] = 0
+            metrics["macro_f1_score"] = 0
+            metrics["macro_accuracy"] = 0
+            metrics["macro_specificity"] = 0
+            metrics["macro_sensitivity"] = 0
+            metrics["macro_precision"] = 0
+            metrics["optimal_thresholds"] = [0] * y_pred.shape[1]
+            return metrics        
         y_pred_np = y_pred.numpy(force=True)
         y_np = y.numpy(force=True)
 

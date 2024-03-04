@@ -118,7 +118,9 @@ class FedISICLearner(Learner):
             dxo_global_weights = dxo_collection.data.get(AppConstants.MODEL_WEIGHTS)
             dxo_global_ctrl_weights = dxo_collection.data.get(AlgorithmConstants.SCAFFOLD_CTRL_GLOBAL)
             if dxo_global_ctrl_weights is None:
-                self.log_error(fl_ctx, "DXO collection doesn't contain the SCAFFOLD controls!")
+                self.log_error(
+                    fl_ctx, "DXO collection doesn't contain the SCAFFOLD controls!"
+                )
                 return make_reply(ReturnCode.EXECUTION_EXCEPTION)
             # convert to tensor and load into c_global model
             global_ctrl_weights = dxo_global_ctrl_weights.data
@@ -255,13 +257,15 @@ class FedISICLearner(Learner):
         load_weights(self.model, dxo.data)
 
         self.model = self.model.to(self.device)
-        for i in range(self.max_retry+1):
+        for i in range(self.max_retry + 1):
             try:
                 raw_metrics = self.validator.run(self.model, data_loader)
                 break
             except Exception as e:
                 if i < self.max_retry:
-                    self.log_warning(fl_ctx, "Error encountered in validation, retrying.")
+                    self.log_warning(
+                        fl_ctx, "Error encountered in validation, retrying."
+                    )
                     # Cleanup previous dataset & dataloader
                     self.dm.teardown()
                     self.dm.setup()
@@ -302,7 +306,7 @@ class FedISICLearner(Learner):
             if model_data:
                 data = {}
                 for var_name in model_data["model"]:
-                    data[var_name] = model_data['model'][var_name].numpy()
+                    data[var_name] = model_data["model"][var_name].numpy()
                 dxo = DXO(data_kind=DataKind.WEIGHTS, data=data)
                 return dxo.to_shareable()
             else:

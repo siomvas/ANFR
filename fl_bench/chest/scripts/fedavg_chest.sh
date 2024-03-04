@@ -3,27 +3,27 @@ RESULT_ROOT=/path/to/sharedscratch/miccai23/chest
 algorithms_dir="/path/to/FL_bench/fl_bench/chest/job_configs"
 
 seed=2024
-config=federated_copy
+config=federated
 clients=client_cxr14,client_padchest,client_cxp_young,client_cxp_old
 gpu=0,0,0,0
 
-scheduler=onecycle
-optim_resume=resume
+scheduler=warmcosine
 steps_or_epochs=steps
-steps=500
-rounds=50
-lr=1e-3
+steps=200
+rounds=20
+lr=5e-4
 
-batch_size=64
+batch_size=128
 cache_rate=1.0
+optim_resume=resume
 grad_clipping_type=none
-
 criterion=bce
 
-for method in scaffold; do
-    for model_name in resnet_50_supervised nf_resnet50_supervised seresnet_50_supervised resnet50_gn_supervised; do
 
-        name="${model_name}_${method}_${lr}_${grad_clipping_type}_${optim_resume}_${criterion}"
+for method in fedavg; do
+    for model_name in resnet_50_supervised nf_resnet50_supervised; do
+
+        name="${model_name}_${method}_${steps}_${steps_or_epochs}_${lr}_${scheduler}_bs_${batch_size}_strong_aug_mindecay_short"
         target_config=${algorithms_dir}/chest_${config}
 
         python3 /path/to/FL_bench/fl_bench/chest/src/setup.py \

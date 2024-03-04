@@ -135,3 +135,14 @@ def resnet50_gn_supervised(seed):
     )
     os.environ['https_proxy'] = ''
     return model
+
+
+def nf_seresnet50_pretrained(seed):
+    model = timm.create_model(
+        "nf_seresnet50",
+        pretrained=True,
+        pretrained_cfg_overlay=dict(file='/path/to/archive/senf_model/model_best.pth.tar'),
+        num_classes=NUM_CLASSES,
+        in_chans=1
+    )
+    return model

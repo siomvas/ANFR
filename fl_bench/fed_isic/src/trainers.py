@@ -641,7 +641,7 @@ def get_trainer(method, config, class_weights, **kwargs):
         return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
     elif method == "fedper":
         return PartPrivateTrainer(
-            config, class_weights, private_layers=["fc"], exclude_vars=["se"]
+            config, class_weights, private_layers=["fc"], exclude_vars=["se", "attn_last"]
         )
     elif method == "scaffold":
         trainer = ScaffoldTrainer(config, class_weights)

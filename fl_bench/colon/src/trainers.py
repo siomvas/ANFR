@@ -106,7 +106,7 @@ class BaseTrainer(FLComponent):
                 end_value=0.001,
             )
         elif self.scheduler_type == "cosine":
-            self.sch = CosineAnnealingLR(self.opt, T_max=self.max_steps, eta_min=0.001)
+            self.sch = CosineAnnealingLR(self.opt, T_max=self.max_steps, eta_min=0.001*self.lr)
         elif self.scheduler_type == "none":
             self.sch = torch.optim.lr_scheduler.ConstantLR(
                 self.opt, factor=1, total_iters=self.max_steps
@@ -327,7 +327,7 @@ class PartPrivateTrainer(BaseTrainer):
         self.private_layers = private_layers
         self.private_layer_state = None
         self.interp_method = config["interp_method"]
-        self.exclude_vars = exclude_vars
+        self.exclude_vars = exclude_vars if exclude_vars is not None else []
         self.str_meth = str_meth
 
     def setup(self, model, logger, data_loader, num_steps, abort_signal):
@@ -638,7 +638,7 @@ def get_trainer(method, config, **kwargs):
         return PartPrivateTrainer(config, private_layers=["attn", "se"])
     elif method == "fedper":
         return PartPrivateTrainer(
-            config, private_layers=["fc"], exclude_vars=["se"]
+            config, private_layers=["fc"], exclude_vars=["se", "attn_last"]
         )
     elif method == "scaffold":
         trainer = ScaffoldTrainer(config)

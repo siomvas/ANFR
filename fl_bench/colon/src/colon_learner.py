@@ -57,7 +57,9 @@ class ColonLearner(Learner):
         with open(prefix / "config" / self.config_train_name) as f:
             config_train = json.load(f)
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda:0" if torch.cuda.is_available() else "cpu"
+        )
         if self.device == "cpu":
             raise ValueError("No GPU detected")
         self.model = eval(config_train["model_name"] + f"({self.seed})").to(self.device)
@@ -296,13 +298,17 @@ class ColonLearner(Learner):
         return dxo.to_shareable()
 
     def get_model_for_validation(self, model_name: str, fl_ctx: FLContext) -> Shareable:
-        if model_name == ModelName.BEST_MODEL:
+        if model_name == ModelName.BEST_MODEL or model_name == ModelName.FINAL_MODEL:
             model_data = None
             try:
-                model_data = torch.load(self.best_model_path, map_location="cpu")
-                self.log_info(fl_ctx, f"Load best model from {self.best_model_path}")
+                if model_name == ModelName.FINAL_MODEL:
+                    model_data = torch.load(self.last_model_path, map_location="cpu")
+                    self.log_info(fl_ctx, f"Load final model from {self.last_model_path}")
+                else:
+                    model_data = torch.load(self.best_model_path, map_location="cpu")
+                    self.log_info(fl_ctx, f"Load best model from {self.best_model_path}")
             except Exception as e:
-                self.log_error(fl_ctx, f"Unable to load best model: {e}")
+                self.log_error(fl_ctx, f"Unable to load model: {e}")
 
             if model_data:
                 data = {}
@@ -311,9 +317,7 @@ class ColonLearner(Learner):
                 dxo = DXO(data_kind=DataKind.WEIGHTS, data=data)
                 return dxo.to_shareable()
             else:
-                self.log_error(
-                    fl_ctx, f"best local model not available at {self.best_model_path}"
-                )
+                self.log_error(fl_ctx, "local model not available")
                 return make_reply(ReturnCode.EXECUTION_RESULT_ERROR)
         else:
             self.log_error(fl_ctx, f"Unknown model_type {model_name}")

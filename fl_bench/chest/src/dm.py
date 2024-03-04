@@ -37,21 +37,21 @@ class ChestDataModule:
 
         self.transform_train = A.Compose([
             A.ShiftScaleRotate(
-                shift_limit_x=0.05,
+                shift_limit_x=0.1,
                 shift_limit_y=0.1,
                 border_mode=0,
                 value=np.random.randint(0, 255),
-                scale_limit=0.05,
-                rotate_limit=10,
+                scale_limit=0.1,
+                rotate_limit=15,
                 p=0.5,
             ),
             A.CoarseDropout(
                 max_holes=3,
-                max_height=50,
-                max_width=50,
+                max_height=70,
+                max_width=70,
                 min_holes=1,
-                min_height=20,
-                min_width=20,
+                min_height=30,
+                min_width=30,
                 fill_value=np.random.randint(0, 255),
                 p=0.5,
             ),

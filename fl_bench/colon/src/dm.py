@@ -33,9 +33,17 @@ class ColonDataModule:
         self.transform_train = transforms.Compose(
             [
                 transforms.ToTensor(),
+                transforms.RandomHorizontalFlip(),
+                # transforms.RandomVerticalFlip(),
+                transforms.ColorJitter(
+                    brightness=0.2, contrast=0.25, saturation=0.5, hue=0.2),
             ]
         )
-        self.transform_valid = self.transform_train
+        self.transform_valid = transforms.Compose(
+            [
+                transforms.ToTensor(),
+            ]
+        )
         self.target_transform = transforms.Compose([lambda x: x.squeeze(-1)])
         self.setup()
 

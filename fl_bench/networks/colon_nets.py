@@ -55,12 +55,12 @@ def nf_resnet50_supervised(seed):
     return model
 
 
-def nf_se_resnet50(seed):
-    seed_everything(seed)
+def nf_seresnet50_pretrained(seed):
     model = timm.create_model(
-        'nf_seresnet50',
-        pretrained=False,
-        num_classes=NUM_CLASSES,
+        "nf_seresnet50",
+        pretrained=True,
+        pretrained_cfg_overlay=dict(file='/path/to/archive/senf_model/model_best.pth.tar'),
+        num_classes=NUM_CLASSES
     )
     return model
 

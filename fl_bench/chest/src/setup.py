@@ -206,6 +206,10 @@ def main():
             write_json(train_config, train_config_filename)
             print(f"Setting {arg} = {getattr(args, arg)}")
 
+    if args.method != "fedprox":
+        train_config["fedprox_mu"] = 0.0
+        write_json(train_config, train_config_filename)
+
 
 if __name__ == "__main__":
     main()
