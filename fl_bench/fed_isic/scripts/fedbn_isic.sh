@@ -19,12 +19,12 @@ grad_clipping_value=1.0
 batch_size=64
 
 
-for seed in 1 2; do
-    for method in fedbn; do
+for seed in 1 2 3; do
+    for method in fedper; do
         for grad_clipping_type in none; do
-            for model_name in resnet_50_pretrained_timm seresnet_50_supervised; do
+            for model_name in nf_seresnet50_pretrained; do
 
-                name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_seed_${seed}"
+                name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_seed_${seed}fedper_best"
                 target_config=${algorithms_dir}/fed_isic_${config}
 
                 python3 /path/to/FL_bench/fl_bench/fed_isic/src/setup.py \

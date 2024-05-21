@@ -34,9 +34,10 @@ class ColonDataModule:
             [
                 transforms.ToTensor(),
                 transforms.RandomHorizontalFlip(),
-                # transforms.RandomVerticalFlip(),
+                transforms.RandomVerticalFlip(),
                 transforms.ColorJitter(
-                    brightness=0.2, contrast=0.25, saturation=0.5, hue=0.2),
+                    brightness=0.2, contrast=0.5, saturation=0.5, hue=0.2),
+                transforms.RandomErasing(value='random')
             ]
         )
         self.transform_valid = transforms.Compose(

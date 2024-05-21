@@ -1,0 +1,9 @@
+{
+    "name": "colon_federated_dp_2_resnet50_gn_supervised_25_5e-05_500_alpha0.5_colon_fedavg",
+    "deploy_map": {
+        "colon_federated_dp_2": [
+            "@ALL"
+        ]
+    },
+    "min_clients": 3
+}

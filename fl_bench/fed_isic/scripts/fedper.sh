@@ -5,7 +5,7 @@ algorithms_dir="/path/to/FL_bench/fl_bench/fed_isic/job_configs"
 config=federated_per
 
 seed=2
-gpu=0,0,0,0,0,0
+gpu=0,0,0,1,1,1
 
 scheduler=onecycle
 optim_resume=resume
@@ -19,12 +19,12 @@ grad_clipping_value=1.0
 batch_size=64
 
 
-for seed in 1 2 3; do
-    for method in fedper; do
+for seed in 2 3; do
+    for method in fedavg; do
         for grad_clipping_type in none; do
-            for model_name in resnet_50_pretrained_timm nf_resnet50_supervised seresnet_50_supervised resnet50_gn_supervised; do
+            for model_name in nf_seresnet50_pretrained; do
 
-                name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_seed_${seed}"
+                name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_seed_${seed}_fedavg_as_base"
                 target_config=${algorithms_dir}/fed_isic_${config}
 
                 python3 /path/to/FL_bench/fl_bench/fed_isic/src/setup.py \

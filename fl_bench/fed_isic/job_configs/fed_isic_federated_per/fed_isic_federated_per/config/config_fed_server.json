@@ -2,9 +2,9 @@
     "format_version": 2,
     "min_clients": 6,
     "num_rounds": 80,
-    "seed": 1,
+    "seed": 3,
     "hyperion": true,
-    "model_path": "fl_bench.networks.fed_isic_nets.seresnet_50_supervised",
+    "model_path": "fl_bench.networks.fed_isic_nets.nf_seresnet50_pretrained",
     "server": {
         "heart_beat_timeout": 600
     },
@@ -124,6 +124,7 @@
                 "formatter_id": "formatter",
                 "submit_model_timeout": 600,
                 "validation_timeout": 6000,
+                "model_choice": "best",
                 "cleanup_models": true
             }
         }

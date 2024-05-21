@@ -4,7 +4,7 @@
     "batch_size": 64,
     "max_steps": 16000,
     "scheduler": "onecycle",
-    "model_name": "seresnet_50_supervised",
+    "model_name": "nf_seresnet50_pretrained",
     "optimizer_args": {
         "class": "Adam"
     },

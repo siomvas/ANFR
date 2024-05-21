@@ -641,6 +641,8 @@ def get_trainer(method, config, class_weights, **kwargs):
             config, class_weights, private_layers=["bn"])
     elif method == "fedattn":
         return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
+    elif method == "fedcombo":
+        return PartPrivateTrainer(config, class_weights, private_layers=["fc"])
     elif method == "fedper":
         return PartPrivateTrainer(
             config, class_weights, private_layers=["fc"], exclude_vars=["se", "attn_last"]

@@ -639,6 +639,13 @@ def get_trainer(method, config, class_weights, **kwargs):
             config, class_weights, private_layers=["bn"])
     elif method == "fedattn":
         return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
+    elif method == "fedcombo":
+        # due to naming this loads SE layers and final layer
+        return PartPrivateTrainer(config, class_weights, private_layers=["fc"])
+    elif method == "fedcombo2":
+        return PartPrivateTrainer(
+            config, class_weights, private_layers=["bn", "se"]
+        )
     elif method == "fedper":
         return PartPrivateTrainer(
             config, class_weights, private_layers=["fc"], exclude_vars=["se", "attn_last"]

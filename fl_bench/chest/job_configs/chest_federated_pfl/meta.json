@@ -1,0 +1,9 @@
+{
+    "name": "chest_federated_pfl_seresnet_50_supervised_20_0.0005_200_fed_isic_fedavg",
+    "resource_spec": {},
+    "deploy_map": {
+        "chest_federated_pfl": [
+            "@ALL"
+        ]
+    }
+}

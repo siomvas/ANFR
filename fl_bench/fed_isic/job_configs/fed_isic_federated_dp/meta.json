@@ -1,0 +1,9 @@
+{
+    "name": "fed_isic_federated_dp_nf_resnet50_supervised_100_0.001_1_fed_isic_fedavg",
+    "deploy_map": {
+        "fed_isic_federated_dp": [
+            "@ALL"
+        ]
+    },
+    "min_clients": 6
+}

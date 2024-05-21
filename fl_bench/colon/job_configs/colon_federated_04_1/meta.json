@@ -1,0 +1,9 @@
+{
+    "name": "colon_federated_04_1_nf_seresnet50_pretrained_25_0.0001_250_alpha0.5_colon_fedavg",
+    "deploy_map": {
+        "colon_federated_04_1": [
+            "@ALL"
+        ]
+    },
+    "min_clients": 3
+}

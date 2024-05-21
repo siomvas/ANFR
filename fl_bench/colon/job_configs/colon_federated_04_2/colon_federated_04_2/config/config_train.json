@@ -1,0 +1,20 @@
+{
+    "train_idx_root": "/path/to/FL_bench/fl_bench/colon/splits/combo/alpha=0.5_seed=1",
+    "learning_rate": 4.99999e-05,
+    "fedprox_mu": 0.0,
+    "batch_size": 128,
+    "max_steps": 6250,
+    "scheduler": "none",
+    "model_name": "nf_seresnet50_pretrained",
+    "optimizer_args": {
+        "class": "Adam",
+        "weight_decay": 1e-05
+    },
+    "optim_resume": "resume",
+    "local_steps": 250,
+    "use_half_precision": true,
+    "interp_method": "",
+    "grad_clipping_type": "none",
+    "grad_clipping_value": 1.0,
+    "steps_or_epochs": "steps"
+}
