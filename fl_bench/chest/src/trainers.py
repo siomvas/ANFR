@@ -140,7 +140,7 @@ class BaseTrainer(FLComponent):
         # the rest of training_loop treats num_steps as actual number of steps
         # so convert num_steps to the number of steps if necessary
         if self.steps_or_epochs == "epochs":
-            num_steps = len(data_loader)
+            num_steps = len(data_loader) * num_steps
         target_step = self.current_step + num_steps
         avg_loss = 0.0
         self.criterion.to(device)

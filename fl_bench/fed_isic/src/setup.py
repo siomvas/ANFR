@@ -20,7 +20,7 @@ def main():
     parser.add_argument("-seed", type=int, default=222)
     parser.add_argument("--optim_resume", type=str, default="restart", choices=["restart", "resume"])
     parser.add_argument("--fedprox_mu", type=float, default=0.0)
-    parser.add_argument("--grad_clipping_type", type=str, default="norm", choices=["none", "norm", "value"])
+    parser.add_argument("--grad_clipping_type", type=str, default="norm", choices=["none", "norm", "value", "agc"])
     parser.add_argument("--grad_clipping_value", type=float, default=1.0)
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--use_hyperion_dirs", action="store_true")

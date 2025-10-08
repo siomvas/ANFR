@@ -5,6 +5,7 @@ from copy import deepcopy
 from multiprocessing.pool import ThreadPool
 
 import albumentations as A
+import albumentations.augmentations.functional as F
 import numpy as np
 import torch
 from PIL import Image

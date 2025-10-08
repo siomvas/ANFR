@@ -1,5 +1,5 @@
 {
-    "name": "fed_isic_federated_resnet_50_pretrained_timm_80_0.0005_200_fed_isic_fedprox",
+    "name": "fed_isic_federated_fedconv_invertup_pretrained_80_0.0005_200_fed_isic_fedavg",
     "deploy_map": {
         "fed_isic_federated": [
             "@ALL"

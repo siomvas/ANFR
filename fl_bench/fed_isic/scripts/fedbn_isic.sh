@@ -1,10 +1,9 @@
 conda activate flare
-RESULT_ROOT=/path/to/sharedscratch/miccai23/fed_isic
+RESULT_ROOT="/path/to/sharedscratch/tmlr_rebuttal"
 algorithms_dir="/path/to/FL_bench/fl_bench/fed_isic/job_configs"
 
 config=federated_per
 
-seed=2
 gpu=0,0,0,0,0,0
 
 scheduler=onecycle
@@ -19,12 +18,12 @@ grad_clipping_value=1.0
 batch_size=64
 
 
-for seed in 1 2 3; do
-    for method in fedper; do
+for seed in 1; do
+    for method in fedbn; do
         for grad_clipping_type in none; do
-            for model_name in nf_seresnet50_pretrained; do
+            for model_name in seresnet_50_supervised; do
 
-                name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_seed_${seed}fedper_best"
+                name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_seed_${seed}"
                 target_config=${algorithms_dir}/fed_isic_${config}
 
                 python3 /path/to/FL_bench/fl_bench/fed_isic/src/setup.py \
@@ -44,6 +43,7 @@ for seed in 1 2 3; do
                 --opt_args '{"class": "Adam"}' \
                 --use_hyperion_dirs \
                 --amp \
+                --interp_method fixbn \
                 
                 nvflare simulator ${target_config} -w ${RESULT_ROOT}/${name} -n 6 -gpu ${gpu}
             done

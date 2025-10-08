@@ -10,7 +10,7 @@ from nvflare.apis.fl_component import FLComponent
 from nvflare.apis.fl_constant import LogMessageTag
 from nvflare.apis.utils.fl_context_utils import generate_log_message
 from nvflare.app_opt.pt.fedproxloss import PTFedProxLoss
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, MultiStepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 from tqdm import tqdm
@@ -102,12 +102,16 @@ class BaseTrainer(FLComponent):
         elif self.scheduler_type == "warmcosine":
             self.sch = CosineWarmupScheduler(
                 self.opt,
-                warmup_epochs=self.max_steps * 0.2,
+                warmup_epochs=self.max_steps * 0.1,
                 max_epochs=self.max_steps / self.gradient_accumulation_steps,
                 end_value=0.001,
             )
         elif self.scheduler_type == "cosine":
             self.sch = CosineAnnealingLR(self.opt, T_max=self.max_steps, eta_min=0.001)
+        
+        elif self.scheduler_type == "multistep":
+            self.sch = MultiStepLR(self.opt, milestones=[3, 5, 7, 9, 11, 13, 15, 17], gamma=0.5)
+
         elif self.scheduler_type == "none":
             self.sch = torch.optim.lr_scheduler.ConstantLR(
                 self.opt, factor=1, total_iters=self.max_steps
@@ -139,7 +143,7 @@ class BaseTrainer(FLComponent):
         # the rest of training_loop treats num_steps as actual number of steps
         # so convert num_steps to the number of steps if necessary
         if self.steps_or_epochs == "epochs":
-            num_steps = len(data_loader)
+            num_steps = len(data_loader) * num_steps
         target_step = self.current_step + num_steps
         avg_loss = 0.0
         with tqdm(total=num_steps, dynamic_ncols=True) as pbar:

@@ -16,6 +16,12 @@ from prettytable import PrettyTable
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from fl_bench.networks.fed_isic_nets import *
+from fl_bench.networks.fed_isic_nets import fedconv_invertup_pretrained
+from fl_bench.networks.fed_isic_nets import fedconv_normal_pretrained
+from fl_bench.networks.fed_isic_nets import convnext_small_pretrained_timm
+from fl_bench.networks.fed_isic_nets import nf_seresnet50_pretrained
+from fl_bench.networks.fed_isic_nets import seresnet_50_supervised, vit_small_pretrained, efficientnet_v2_s_supervised, fedconv_invertup_scratch, convnext_small_scratch
+from fl_bench.networks.fed_isic_nets import resnet_50_pretrained
 from fl_bench.utils.misc import extract_weights, load_weights, seed_everything
 
 from .FedIsicDM import FedIsicDataModule
@@ -83,6 +89,8 @@ class FedISICLearner(Learner):
         for i in range(8):
             class_weights.append(N / (weights[i]+1e-6))
         self.class_weights = torch.FloatTensor(class_weights).to(self.device)
+        # self.class_weights = torch.FloatTensor([5.5813, 2.0472, 7.0204, 26.1194, 9.5369, 101.0707, 92.5224, 38.3443]).to(self.device)
+
         print("Class weights extract from training dataset applied to loss function:", self.class_weights)
 
         self.local_steps = config_train["local_steps"]

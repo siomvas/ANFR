@@ -1,16 +1,16 @@
 {
     "learning_rate": 0.0005,
-    "fedprox_mu": 0.01,
+    "fedprox_mu": 0.0,
     "batch_size": 64,
     "max_steps": 16000,
     "scheduler": "onecycle",
-    "model_name": "resnet_50_pretrained_timm",
+    "model_name": "fedconv_invertup_pretrained",
     "optimizer_args": {
         "class": "Adam"
     },
     "optim_resume": "resume",
     "local_steps": 200,
-    "use_half_precision": true,
+    "use_half_precision": false,
     "interp_method": "",
     "grad_clipping_type": "none",
     "grad_clipping_value": 1.0,

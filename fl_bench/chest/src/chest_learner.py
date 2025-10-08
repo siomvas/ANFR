@@ -16,6 +16,7 @@ from prettytable import PrettyTable
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from fl_bench.networks.chest_nets import *
+from fl_bench.networks.chest_nets import fedconv_invertup_pretrained, vit_small_pretrained, convnext_small_supervised
 from fl_bench.utils.misc import extract_weights, load_weights, seed_everything
 
 from .dm import ChestDataModule
@@ -80,8 +81,12 @@ class ChestLearner(Learner):
         self.class_weights = torch.FloatTensor(self.dm.weights).to(self.device)
         # initialize bias of classification layer
         # to the log of the inverse class frequency
-        if "nf" in config_train["model_name"]:
+        if any(x in config_train["model_name"] for x in ["nf", "swin", "convnext", "fedconv"]):
             self.model.head.fc.bias.data = -torch.log(self.class_weights)
+        elif any(x in config_train["model_name"] for x in ["densenet","efficient"]):
+            self.model.classifier.bias.data = -torch.log(self.class_weights)
+        elif "vit" in config_train["model_name"]:
+            self.model.head.bias.data = -torch.log(self.class_weights)
         else:
             self.model.fc.bias.data = -torch.log(self.class_weights)
         self.local_steps = config_train["local_steps"]
