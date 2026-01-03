@@ -2,7 +2,7 @@
     "format_version": 2,
     "min_clients": 4,
     "num_rounds": 20,
-    "seed": 2024,
+    "seed": 1995,
     "hyperion": true,
     "model_path": "fl_bench.networks.chest_nets.seresnet_50_supervised",
     "server": {

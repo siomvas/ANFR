@@ -23,13 +23,13 @@
     "components": [
         {
             "id": "chest-learner",
-            "path": "fl_bench.chest.chest_learner.ChestLearner",
+            "path": "fl_bench.chest.src.chest_learner.ChestLearner",
             "args": {
                 "config_train_name": "config_train.json",
                 "method": "fedavg",
-                "seed": 24,
+                "seed": 55,
                 "central": true,
-                "hyperion": false
+                "hyperion": true
             }
         }
     ]

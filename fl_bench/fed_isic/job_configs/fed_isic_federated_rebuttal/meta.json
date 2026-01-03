@@ -1,0 +1,9 @@
+{
+    "name": "fed_isic_federated_rebuttal_fixup_seresnet50_80_0.0005_400_fed_isic_fedavg",
+    "deploy_map": {
+        "fed_isic_federated_rebuttal": [
+            "@ALL"
+        ]
+    },
+    "min_clients": 6
+}

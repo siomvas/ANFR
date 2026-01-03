@@ -1,9 +1,0 @@
-{
-    "name": "fed_isic_federated_dual_nf_seresnet50_pretrained_80_0.0005_200_fed_isic_fedper",
-    "deploy_map": {
-        "fed_isic_federated_dual": [
-            "@ALL"
-        ]
-    },
-    "min_clients": 6
-}

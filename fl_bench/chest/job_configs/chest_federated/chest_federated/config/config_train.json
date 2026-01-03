@@ -5,7 +5,7 @@
     "max_steps": 4000,
     "scheduler": "warmcosine",
     "criterion": "bce",
-    "model_name": "seresnet_50_supervised",
+    "model_name": "fedconv_normal_pretrained",
     "optimizer_args": {
         "class": "Adam"
     },

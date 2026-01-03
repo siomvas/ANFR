@@ -1,9 +1,9 @@
 {
     "format_version": 2,
     "min_clients": 1,
-    "num_rounds": 150,
-    "seed": 0,
-    "model_path": "fl_bench.networks.chest_nets.swin_unetr",
+    "num_rounds": 1,
+    "seed": 55,
+    "model_path": "fl_bench.networks.chest_nets.resnet50_gn_supervised",
     "server": {
         "heart_beat_timeout": 600
     },
@@ -58,7 +58,8 @@
             "id": "aggregator",
             "name": "InTimeAccumulateWeightedAggregator",
             "args": {
-                "expected_data_kind": "WEIGHT_DIFF"
+                "expected_data_kind": "WEIGHT_DIFF",
+                "exclude_vars": ""
             }
         },
         {
@@ -94,7 +95,10 @@
         {
             "id": "report_generator",
             "path": "fl_bench.utils.report_generator.ReportGenerator",
-            "args": {}
+            "args": {
+                "metric_type": "multi",
+                "metric_name": "mean_auroc"
+            }
         }
     ],
     "workflows": [
@@ -115,5 +119,5 @@
             }
         }
     ],
-    "hyperion": false
+    "hyperion": true
 }

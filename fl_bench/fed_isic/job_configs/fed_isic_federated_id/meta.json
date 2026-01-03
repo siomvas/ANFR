@@ -1,0 +1,9 @@
+{
+    "name": "fed_isic_federated_id_vit_small_pretrained_80_0.0005_200_fed_isic_fedavg",
+    "deploy_map": {
+        "fed_isic_federated_id": [
+            "@ALL"
+        ]
+    },
+    "min_clients": 6
+}

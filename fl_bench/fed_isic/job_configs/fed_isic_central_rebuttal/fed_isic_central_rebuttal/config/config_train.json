@@ -1,0 +1,18 @@
+{
+    "learning_rate": 0.0005,
+    "fedprox_mu": 0.0,
+    "batch_size": 64,
+    "max_steps": 20,
+    "scheduler": "none",
+    "model_name": "nf_resnet50_supervised",
+    "optimizer_args": {
+        "class": "Adam"
+    },
+    "optim_resume": "resume",
+    "local_steps": 20,
+    "use_half_precision": false,
+    "interp_method": "",
+    "grad_clipping_type": "none",
+    "grad_clipping_value": 0.0,
+    "steps_or_epochs": "epochs"
+}

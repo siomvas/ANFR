@@ -28,8 +28,8 @@
             "args": {
                 "config_train_name": "config_train.json",
                 "max_retry": 0,
-                "method": "fedavg",
-                "seed": 3,
+                "method": "fedbn",
+                "seed": 1,
                 "central": false,
                 "hyperion": true
             }

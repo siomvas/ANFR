@@ -27,8 +27,8 @@
             "path": "fl_bench.chest.src.chest_learner.ChestLearner",
             "args": {
                 "config_train_name": "config_train.json",
-                "method": "fedopt",
-                "seed": 1,
+                "method": "fedprox",
+                "seed": 999,
                 "central": false,
                 "hyperion": true
             }

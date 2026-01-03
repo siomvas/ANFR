@@ -27,8 +27,8 @@
             "path": "fl_bench.chest.src.chest_learner.ChestLearner",
             "args": {
                 "config_train_name": "config_train.json",
-                "method": "fedavg",
-                "seed": 2024,
+                "method": "fedbn",
+                "seed": 1995,
                 "central": false,
                 "hyperion": true
             }

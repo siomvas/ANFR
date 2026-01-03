@@ -12,7 +12,7 @@
     "optim_resume": "resume",
     "local_steps": 200,
     "use_half_precision": true,
-    "interp_method": "",
+    "interp_method": "fixbn",
     "cache_rate": 1.0,
     "grad_clipping_type": "none",
     "grad_clipping_value": 1.0,

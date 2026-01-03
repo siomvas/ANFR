@@ -1,5 +1,5 @@
-conda activate flare_11
-RESULT_ROOT=/path/to/sharedscratch/miccai23/chest
+conda activate flare
+RESULT_ROOT="/path/to/sharedscratch/tmlr_rebuttal"
 algorithms_dir="/path/to/FL_bench/fl_bench/chest/job_configs"
 
 seed=2024
@@ -20,8 +20,8 @@ grad_clipping_type=none
 criterion=bce
 fedprox_mu=0.00
 # 42 1995 2024
-for seed in 42 1995 2024; do
-    for method in fedavg; do
+for seed in 42 1995; do
+    for method in fedbn; do
         for model_name in seresnet_50_supervised; do
 
             # if method is fedbn and model name is not resnet_50_supervised or seresnet_50_supervised, skip
@@ -52,6 +52,7 @@ for seed in 42 1995 2024; do
             --opt_args '{"class": "Adam"}' \
             --use_hyperion_dirs \
             --amp \
+            --interp_method fixbn \
 
             nvflare simulator ${target_config} -w ${RESULT_ROOT}/${name} -c ${clients} -gpu ${gpu}
         done

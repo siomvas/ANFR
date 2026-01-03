@@ -1,0 +1,9 @@
+{
+    "name": "fed_isic_central_rebuttal_nf_resnet50_supervised_1_0.0005_20_fed_isic_fedavg",
+    "deploy_map": {
+        "fed_isic_central_rebuttal": [
+            "@ALL"
+        ]
+    },
+    "min_clients": 1
+}

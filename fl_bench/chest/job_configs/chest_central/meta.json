@@ -1,5 +1,5 @@
 {
-    "name": "",
+    "name": "chest_central_resnet50_gn_supervised_1_0.0005_20_fed_isic_fedavg",
     "resource_spec": {},
     "deploy_map": {
         "chest_central": [
