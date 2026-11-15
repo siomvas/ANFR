@@ -31,7 +31,7 @@ The SE and ECA architectures are part of timm. The CBAM variant is registered by
 | `fl_bench/networks/anfr.py` | The ANFR models: registration of the CBAM variant and loading of the weights |
 | `fl_bench/fed_isic` | Fed-ISIC2019, including the differentially private and intrinsic-dimension variants |
 | `fl_bench/chest` | FedChest, with `src/chest_preparation.py`, the script that built the dataset for the paper |
-| `fl_bench/colon` | FedPathology, with its Dirichlet partitions and differentially private training |
+| `fl_bench/colon` | FedPathology, with the script that packs the dataset, its Dirichlet partitions and differentially private training |
 | `fl_bench/networks` | Model factories for ANFR and the baselines (ResNet-50 with batch or group normalization, SE-ResNet-50, NF-ResNet-50) |
 | `fl_bench/utils` | Shared helpers, cross-validation, reporting and the FedOpt generator |
 | `fed_het` | The CIFAR-10 and CelebA experiments |
@@ -67,7 +67,7 @@ Copy `.env.example` to `.env` and set the folders.
 |---|---|
 | `FEDISIC_ROOT` | Fed-ISIC2019, preprocessed as in [FLamby](https://github.com/owkin/FLamby) |
 | `CHEST_ROOT` | FedChest: the images and the `datalists` folder. See [siomvas/FedChest](https://github.com/siomvas/FedChest) |
-| `COLON_ROOT` | FedPathology: `nct_wsi_100k_no_norm.npz`, packed from NCT-CRC-HE-100K-NONORM and CRC-VAL-HE-7K (Kather et al.) |
+| `COLON_ROOT` | FedPathology: `nct_wsi_100k_no_norm.npz`, packed from NCT-CRC-HE-100K-NONORM and CRC-VAL-HE-7K (Kather et al.) by `fl_bench/colon/src/build_arrays.py` |
 | `ANFR_WEIGHTS_DIR` | Optional. A folder with the ANFR checkpoints, used in place of the Hugging Face Hub |
 | `FEDCONV_WEIGHTS_DIR` | Optional. FedConv checkpoints, for that baseline only |
 
