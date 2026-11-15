@@ -21,7 +21,7 @@ batch_size=64
 for seed in 2 3; do
     for method in fedopt; do
         for grad_clipping_type in none; do
-            for model_name in resnet_50_pretrained_timm nf_resnet50_supervised seresnet_50_supervised resnet_50_gn_supervised; do
+            for model_name in resnet_50_pretrained_timm nf_resnet50_supervised seresnet_50_supervised resnet50_gn_supervised; do
 
                 name="${model_name}_${method}_${grad_clipping_type}_${batch_size}_${scheduler}_${optim_resume}_seed_${seed}"
                 target_config=${algorithms_dir}/fed_isic_${config}
