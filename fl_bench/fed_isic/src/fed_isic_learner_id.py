@@ -10,8 +10,7 @@ from nvflare.apis.fl_constant import FLContextKey
 from nvflare.apis.fl_context import FLContext
 from nvflare.apis.shareable import ReturnCode, Shareable, make_reply
 from nvflare.app_common.abstract.learner_spec import Learner
-from nvflare.app_common.app_constant import (AlgorithmConstants, AppConstants,
-                                             ModelName, ValidateType)
+from nvflare.app_common.app_constant import AlgorithmConstants, AppConstants, ModelName, ValidateType
 from prettytable import PrettyTable
 from torch.utils.tensorboard.writer import SummaryWriter
 
@@ -33,7 +32,7 @@ class FedISICLearnerID(Learner):
         central=False,
         train_task_name: str = AppConstants.TASK_TRAIN,
         submit_model_task_name: str = AppConstants.TASK_SUBMIT_MODEL,
-        hyperion=False
+        hyperion=False,
     ):
         super().__init__()
         self.config_train_name = config_train_name
@@ -54,14 +53,10 @@ class FedISICLearnerID(Learner):
         with open(prefix / "config" / self.config_train_name) as f:
             config_train = json.load(f)
 
-        self.device = torch.device(
-            "cuda:0" if torch.cuda.is_available() else "cpu"
-        )
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if self.device == "cpu":
             raise ValueError("No GPU detected")
-        self.model = eval(
-            config_train["model_name"] + f"({self.seed})"
-        ).to(self.device)
+        self.model = eval(config_train["model_name"] + f"({self.seed})").to(self.device)
 
         if self.hyperion:
             data_dir = os.getenv("HYPERION_FEDISIC_ROOT")
@@ -73,15 +68,15 @@ class FedISICLearnerID(Learner):
             client_idx=fl_ctx.get_identity_name(),
             central=self.central,
             batch_size=config_train["batch_size"],
-            seed=self.seed
+            seed=self.seed,
         )
         weights = [0] * 8
         for x in self.dm.train_dataset:
-            weights[int(x['label'])] += 1
+            weights[int(x["label"])] += 1
         N = len(self.dm.train_dataset)
         class_weights = []
         for i in range(8):
-            class_weights.append(N / (weights[i]+1e-6))
+            class_weights.append(N / (weights[i] + 1e-6))
         self.class_weights = torch.FloatTensor(class_weights).to(self.device)
         # self.class_weights = torch.FloatTensor([5.5813, 2.0472, 7.0204, 26.1194, 9.5369, 101.0707, 92.5224, 38.3443]).to(self.device)
 
@@ -108,7 +103,7 @@ class FedISICLearnerID(Learner):
         self.log_info(fl_ctx, f"Client identity: {fl_ctx.get_identity_name()}")
 
         # SCAFFOLD related
-        if self.method == 'scaffold':
+        if self.method == "scaffold":
             dxo_collection = from_shareable(data)
             if dxo_collection.data_kind != DataKind.COLLECTION:
                 self.log_error(
@@ -120,9 +115,7 @@ class FedISICLearnerID(Learner):
             dxo_global_weights = dxo_collection.data.get(AppConstants.MODEL_WEIGHTS)
             dxo_global_ctrl_weights = dxo_collection.data.get(AlgorithmConstants.SCAFFOLD_CTRL_GLOBAL)
             if dxo_global_ctrl_weights is None:
-                self.log_error(
-                    fl_ctx, "DXO collection doesn't contain the SCAFFOLD controls!"
-                )
+                self.log_error(fl_ctx, "DXO collection doesn't contain the SCAFFOLD controls!")
                 return make_reply(ReturnCode.EXECUTION_EXCEPTION)
             # convert to tensor and load into c_global model
             global_ctrl_weights = dxo_global_ctrl_weights.data
@@ -174,7 +167,7 @@ class FedISICLearnerID(Learner):
                 break
             except Exception as e:
                 if i < self.max_retry:
-                    self.log_warning(fl_ctx, f"Something wrong in val, retrying ({i+1}/{self.max_retry}).")
+                    self.log_warning(fl_ctx, f"Something wrong in val, retrying ({i + 1}/{self.max_retry}).")
                     # Reset dataset & dataloader
                     self.dm.teardown()
                     self.dm.setup()
@@ -212,7 +205,7 @@ class FedISICLearnerID(Learner):
         )
 
         # SCAFFOLD related
-        if self.method == 'scaffold':
+        if self.method == "scaffold":
             # Create a DXO collection with weights and scaffold controls
             dxo_weights_diff_ctrl = DXO(
                 data_kind=DataKind.WEIGHT_DIFF,
@@ -220,9 +213,9 @@ class FedISICLearnerID(Learner):
                 meta={MetaKey.NUM_STEPS_CURRENT_ROUND: self.local_steps},
             )
             collection_data = {
-                    AppConstants.MODEL_WEIGHTS: dxo,
-                    AlgorithmConstants.SCAFFOLD_CTRL_DIFF: dxo_weights_diff_ctrl,
-                }
+                AppConstants.MODEL_WEIGHTS: dxo,
+                AlgorithmConstants.SCAFFOLD_CTRL_DIFF: dxo_weights_diff_ctrl,
+            }
 
             dxo = DXO(data_kind=DataKind.COLLECTION, data=collection_data)
 
@@ -265,9 +258,7 @@ class FedISICLearnerID(Learner):
                 break
             except Exception as e:
                 if i < self.max_retry:
-                    self.log_warning(
-                        fl_ctx, "Error encountered in validation, retrying."
-                    )
+                    self.log_warning(fl_ctx, "Error encountered in validation, retrying.")
                     # Cleanup previous dataset & dataloader
                     self.dm.teardown()
                     self.dm.setup()
@@ -276,7 +267,7 @@ class FedISICLearnerID(Learner):
 
         self.log_info(
             fl_ctx,
-            f"Validation metrics of {model_owner}'s model on" f" {fl_ctx.get_identity_name()}'s data: {raw_metrics}",
+            f"Validation metrics of {model_owner}'s model on {fl_ctx.get_identity_name()}'s data: {raw_metrics}",
         )
 
         if validate_type == ValidateType.BEFORE_TRAIN_VALIDATE:

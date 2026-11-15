@@ -61,9 +61,7 @@ class ColonSplitter(FLComponent):
 
         # write to files
         if self.split_dir is None:
-            raise ValueError(
-                "You need to define a valid `split_dir` when splitting the data."
-            )
+            raise ValueError("You need to define a valid `split_dir` when splitting the data.")
         if not os.path.isdir(self.split_dir):
             os.makedirs(self.split_dir)
         sum_file_name = os.path.join(self.split_dir, "summary.txt")
@@ -72,9 +70,7 @@ class ColonSplitter(FLComponent):
             sum_file.write(f"Dirichlet sampling parameter: {self.alpha}")
             sum_file.write("Train Class counts for each client:")
             sum_file.write(json.dumps(class_sum_train))
-            pretty_json_str = pprint.pformat(
-                json.dumps(class_sum_train), compact=True, indent=2
-            ).replace("'", '"')
+            pretty_json_str = pprint.pformat(json.dumps(class_sum_train), compact=True, indent=2).replace("'", '"')
             sum_file.write(pretty_json_str)
 
         site_file_path = os.path.join(self.split_dir, "site-")
@@ -83,12 +79,8 @@ class ColonSplitter(FLComponent):
             np.save(site_file_name, np.array(site_idx_train[site]))
 
     def _partition_data(self):
-        data_dir = (
-            os.getenv("COLON_ROOT")
-            if not self.hyperion
-            else os.getenv("HYPERION_COLON_ROOT")
-        )
-        train_labels = np.load(f"{data_dir}/nct_wsi_100k_no_norm.npz", mmap_mode='r')["train_labels"].copy()
+        data_dir = os.getenv("COLON_ROOT") if not self.hyperion else os.getenv("HYPERION_COLON_ROOT")
+        train_labels = np.load(f"{data_dir}/nct_wsi_100k_no_norm.npz", mmap_mode="r")["train_labels"].copy()
         # train_labels = colon_dataset["train_labels"]
         # convert to class encoding
         train_labels = np.argmax(train_labels, axis=1)
@@ -105,20 +97,15 @@ class ColonSplitter(FLComponent):
             for k in range(K):
                 idx_k = np.where(train_labels == k)[0]
                 np.random.shuffle(idx_k)
-                proportions = np.random.dirichlet(
-                    np.repeat(self.alpha, self.num_sites))
+                proportions = np.random.dirichlet(np.repeat(self.alpha, self.num_sites))
                 # Balance
                 proportions = np.array(
-                    [
-                        p * (len(idx_j) < N / self.num_sites)
-                        for p, idx_j in zip(proportions, idx_batch_train)
-                    ]
+                    [p * (len(idx_j) < N / self.num_sites) for p, idx_j in zip(proportions, idx_batch_train)]
                 )
                 proportions = proportions / proportions.sum()
                 proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
                 idx_batch_train = [
-                    idx_j + idx.tolist()
-                    for idx_j, idx in zip(idx_batch_train, np.split(idx_k, proportions))
+                    idx_j + idx.tolist() for idx_j, idx in zip(idx_batch_train, np.split(idx_k, proportions))
                 ]
                 min_size = min([len(idx_j) for idx_j in idx_batch_train])
 

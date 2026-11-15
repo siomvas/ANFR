@@ -219,4 +219,4 @@ uncommon_diseases_cxp = [
 # data = data[["filename", "label"] + common_diseases]
 
 # save the dataframe to a new csv file
-# data.to_csv("metadata.csv", index=True) 
+# data.to_csv("metadata.csv", index=True)

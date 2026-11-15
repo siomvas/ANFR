@@ -14,16 +14,14 @@ load_dotenv()
 
 
 class FocalLoss(nn.Module):
-    def __init__(self, weight=None, gamma=2.):
+    def __init__(self, weight=None, gamma=2.0):
         super().__init__()
         assert gamma >= 0
-        self.register_buffer('weight', torch.tensor(weight))
-        self.register_buffer('gamma', torch.tensor(gamma))
+        self.register_buffer("weight", torch.tensor(weight))
+        self.register_buffer("gamma", torch.tensor(gamma))
 
     def forward(self, input, target):
-        bce = F.binary_cross_entropy_with_logits(
-            input, target, reduction='none', weight=self.weight
-        )
+        bce = F.binary_cross_entropy_with_logits(input, target, reduction="none", weight=self.weight)
         p = torch.exp(-bce)
         loss = (1 - p) ** self.gamma * bce
         return loss.mean()
@@ -48,9 +46,7 @@ class ChestSplitter(FLComponent):
         self.split_dir = split_dir
         self.num_sites = num_sites
         self.seed = seed
-        self.dest_path = os.path.join(
-            self.data_dir, self.split_dir, f"seed_{self.seed}"
-        )
+        self.dest_path = os.path.join(self.data_dir, self.split_dir, f"seed_{self.seed}")
 
         seed_everything(seed)
 
@@ -99,13 +95,9 @@ class ChestSplitter(FLComponent):
             data.drop(columns=["Finding Labels"], inplace=True)
 
             # filter the training/test rows
-            train_list = pd.read_csv(
-                os.path.join(self.data_dir, "train_val_list.txt"), header=None
-            )[0].to_list()
+            train_list = pd.read_csv(os.path.join(self.data_dir, "train_val_list.txt"), header=None)[0].to_list()
             train_data = data[data["Image Index"].isin(train_list)]
-            valid_list = pd.read_csv(
-                os.path.join(self.data_dir, "test_list.txt"), header=None
-            )[0].to_list()
+            valid_list = pd.read_csv(os.path.join(self.data_dir, "test_list.txt"), header=None)[0].to_list()
             valid_data = data[data["Image Index"].isin(valid_list)]
 
             # get the unique patient IDs for the training set
@@ -131,21 +123,19 @@ class ChestSplitter(FLComponent):
                     new_item["image"] = row["Image Index"]
                     new_item["label"] = row.iloc[2:].values.tolist()
                     json_data["validation"].append(new_item)
-                with open(f"{self.dest_path}/site-{i+1}.json", "w") as f:
+                with open(f"{self.dest_path}/site-{i + 1}.json", "w") as f:
                     json.dump(json_data, f, indent=4)
 
             # get the class counts for each site
             class_sum = {}
             for i, site in enumerate(site_idx):
-                class_sum[f"site-{i+1}"] = (
-                    data[data["Patient ID"].isin(site)].iloc[:, 2:].sum().to_dict()
-                )
+                class_sum[f"site-{i + 1}"] = data[data["Patient ID"].isin(site)].iloc[:, 2:].sum().to_dict()
                 # add the number of samples to the summary, which is the number
                 # of patients multiplied by the number of images per patient
                 cnt = 0
                 for patient in site:
                     cnt += len(data[data["Patient ID"] == patient])
-                class_sum[f"site-{i+1}"]["samples"] = cnt
+                class_sum[f"site-{i + 1}"]["samples"] = cnt
 
             return class_sum
         else:

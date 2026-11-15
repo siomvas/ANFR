@@ -10,8 +10,7 @@ from nvflare.apis.fl_constant import FLContextKey
 from nvflare.apis.fl_context import FLContext
 from nvflare.apis.shareable import ReturnCode, Shareable, make_reply
 from nvflare.app_common.abstract.learner_spec import Learner
-from nvflare.app_common.app_constant import (AlgorithmConstants, AppConstants,
-                                             ModelName, ValidateType)
+from nvflare.app_common.app_constant import AlgorithmConstants, AppConstants, ModelName, ValidateType
 from prettytable import PrettyTable
 from torch.utils.tensorboard.writer import SummaryWriter
 
@@ -34,7 +33,7 @@ class ChestLearner(Learner):
         central=False,
         train_task_name: str = AppConstants.TASK_TRAIN,
         submit_model_task_name: str = AppConstants.TASK_SUBMIT_MODEL,
-        hyperion=False
+        hyperion=False,
     ):
         super().__init__()
         self.config_train_name = config_train_name
@@ -55,14 +54,10 @@ class ChestLearner(Learner):
         with open(prefix / "config" / self.config_train_name) as f:
             config_train = json.load(f)
 
-        self.device = torch.device(
-            "cuda:0" if torch.cuda.is_available() else "cpu"
-        )
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if self.device == "cpu":
             raise ValueError("No GPU detected")
-        self.model = eval(
-            config_train["model_name"] + f"({self.seed})"
-        ).to(self.device)
+        self.model = eval(config_train["model_name"] + f"({self.seed})").to(self.device)
 
         if self.hyperion:
             data_dir = os.getenv("HYPERION_CHEST_ROOT")
@@ -83,7 +78,7 @@ class ChestLearner(Learner):
         # to the log of the inverse class frequency
         if any(x in config_train["model_name"] for x in ["nf", "swin", "convnext", "fedconv"]):
             self.model.head.fc.bias.data = -torch.log(self.class_weights)
-        elif any(x in config_train["model_name"] for x in ["densenet","efficient"]):
+        elif any(x in config_train["model_name"] for x in ["densenet", "efficient"]):
             self.model.classifier.bias.data = -torch.log(self.class_weights)
         elif "vit" in config_train["model_name"]:
             self.model.head.bias.data = -torch.log(self.class_weights)
@@ -110,7 +105,7 @@ class ChestLearner(Learner):
         self.log_info(fl_ctx, f"Client identity: {fl_ctx.get_identity_name()}")
 
         # SCAFFOLD related
-        if self.method == 'scaffold':
+        if self.method == "scaffold":
             dxo_collection = from_shareable(data)
             if dxo_collection.data_kind != DataKind.COLLECTION:
                 self.log_error(
@@ -149,7 +144,7 @@ class ChestLearner(Learner):
                     num_steps=self.local_steps,
                     logger=self.writer,
                     device=self.device,
-                    fl_ctx=fl_ctx
+                    fl_ctx=fl_ctx,
                 )
                 break
             except Exception as e:
@@ -172,13 +167,12 @@ class ChestLearner(Learner):
             try:
                 # pass reference to writer so we can add the pr curve
                 metrics = self.validator.run(
-                    self.model, self.dm.val_dataloader, 
-                    logger=self.writer, step=self.trainer.current_step
+                    self.model, self.dm.val_dataloader, logger=self.writer, step=self.trainer.current_step
                 )
                 break
             except Exception as e:
                 if i < self.max_retry:
-                    self.log_warning(fl_ctx, f"Something wrong in val, retrying ({i+1}/{self.max_retry}).")
+                    self.log_warning(fl_ctx, f"Something wrong in val, retrying ({i + 1}/{self.max_retry}).")
                     # Reset dataset & dataloader
                     self.dm.teardown()
                     self.dm.setup()
@@ -189,7 +183,7 @@ class ChestLearner(Learner):
         table = PrettyTable()
         table.field_names = ["Metric", "Value"]
         for m, v in metrics.items():
-            if m == 'optimal_thresholds':
+            if m == "optimal_thresholds":
                 continue
             table.add_row([m, v])
             self.writer.add_scalar(f"{m}/Post-Train Val {m}", v, self.trainer.current_step)
@@ -218,7 +212,7 @@ class ChestLearner(Learner):
         )
 
         # SCAFFOLD related
-        if self.method == 'scaffold':
+        if self.method == "scaffold":
             # Create a DXO collection with weights and scaffold controls
             dxo_weights_diff_ctrl = DXO(
                 data_kind=DataKind.WEIGHT_DIFF,
@@ -226,9 +220,9 @@ class ChestLearner(Learner):
                 meta={MetaKey.NUM_STEPS_CURRENT_ROUND: self.local_steps},
             )
             collection_data = {
-                    AppConstants.MODEL_WEIGHTS: dxo,
-                    AlgorithmConstants.SCAFFOLD_CTRL_DIFF: dxo_weights_diff_ctrl,
-                }
+                AppConstants.MODEL_WEIGHTS: dxo,
+                AlgorithmConstants.SCAFFOLD_CTRL_DIFF: dxo_weights_diff_ctrl,
+            }
 
             dxo = DXO(data_kind=DataKind.COLLECTION, data=collection_data)
 
@@ -266,7 +260,7 @@ class ChestLearner(Learner):
         load_weights(self.model, dxo.data)
 
         self.model = self.model.to(self.device)
-        for i in range(self.max_retry+1):
+        for i in range(self.max_retry + 1):
             try:
                 raw_metrics = self.validator.run(self.model, data_loader)
                 break
@@ -281,7 +275,7 @@ class ChestLearner(Learner):
 
         self.log_info(
             fl_ctx,
-            f"Validation metrics of {model_owner}'s model on" f" {fl_ctx.get_identity_name()}'s data: {raw_metrics}",
+            f"Validation metrics of {model_owner}'s model on {fl_ctx.get_identity_name()}'s data: {raw_metrics}",
         )
 
         if validate_type == ValidateType.BEFORE_TRAIN_VALIDATE:
@@ -312,7 +306,7 @@ class ChestLearner(Learner):
         if model_data:
             data = {}
             for var_name in model_data["model"]:
-                data[var_name] = model_data['model'][var_name].numpy()
+                data[var_name] = model_data["model"][var_name].numpy()
             dxo = DXO(data_kind=DataKind.WEIGHTS, data=data)
             return dxo.to_shareable()
         else:

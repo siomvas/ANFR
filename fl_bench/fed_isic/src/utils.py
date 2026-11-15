@@ -7,12 +7,9 @@ load_dotenv()
 
 
 class WeightedFocalLoss(_Loss):
-
     def __init__(
         self,
-        alpha=torch.tensor(
-            [5.5813, 2.0472, 7.0204, 26.1194, 9.5369, 101.0707, 92.5224, 38.3443]
-        ),
+        alpha=torch.tensor([5.5813, 2.0472, 7.0204, 26.1194, 9.5369, 101.0707, 92.5224, 38.3443]),
         gamma=2.0,
     ):
         super(WeightedFocalLoss, self).__init__()

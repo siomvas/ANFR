@@ -202,7 +202,7 @@ class CrossSiteModelEval(Controller):
 
             if self._submit_model_task_name:
                 shareable = Shareable()
-                if self._model_choice == 'best':
+                if self._model_choice == "best":
                     shareable.set_header(AppConstants.SUBMIT_MODEL_NAME, ModelName.BEST_MODEL)
                 else:
                     shareable.set_header(AppConstants.SUBMIT_MODEL_NAME, ModelName.FINAL_MODEL)

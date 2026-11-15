@@ -27,7 +27,6 @@ from .validator import Validator
 
 
 class BaseTrainer(FLComponent):
-
     def __init__(self, config, class_weights, model=None):
         super().__init__()
 
@@ -84,9 +83,7 @@ class BaseTrainer(FLComponent):
     def configure_optimizer(self):
 
         optimizer_class = self.optimizer_dict.pop("class", None)
-        self.opt = eval(f"torch.optim.{optimizer_class}")(
-            self.model.parameters(), lr=self.lr, **self.optimizer_dict
-        )
+        self.opt = eval(f"torch.optim.{optimizer_class}")(self.model.parameters(), lr=self.lr, **self.optimizer_dict)
         self.optimizer_dict["class"] = optimizer_class
         # Load optimizer state
         if (self.opt_state is not None) and (self.optim_resume == "resume"):
@@ -109,11 +106,9 @@ class BaseTrainer(FLComponent):
                 end_value=0.001,
             )
         elif self.scheduler_type == "cosine":
-            self.sch = CosineAnnealingLR(self.opt, T_max=self.max_steps, eta_min=0.001*self.lr)
+            self.sch = CosineAnnealingLR(self.opt, T_max=self.max_steps, eta_min=0.001 * self.lr)
         elif self.scheduler_type == "none":
-            self.sch = torch.optim.lr_scheduler.ConstantLR(
-                self.opt, factor=1, total_iters=self.max_steps
-            )
+            self.sch = torch.optim.lr_scheduler.ConstantLR(self.opt, factor=1, total_iters=self.max_steps)
         else:
             raise ValueError(f"Invalid scheduler type {self.scheduler_type}")
 
@@ -132,9 +127,7 @@ class BaseTrainer(FLComponent):
                 batch = next(it)
             yield batch
 
-    def training_loop(
-        self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"
-    ):
+    def training_loop(self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"):
 
         # if steps_or_epochs is epochs, num_steps given to training_loop
         # is the number of epochs, otherwise it is the number of steps
@@ -154,14 +147,10 @@ class BaseTrainer(FLComponent):
                     image = batch["image"].to(device)
                     label = batch["label"].to(device)
                     preds = self.model(image)
-                    loss = (
-                        self.criterion(preds, label) / self.gradient_accumulation_steps
-                    )
+                    loss = self.criterion(preds, label) / self.gradient_accumulation_steps
                     if self.criterion_prox is not None:
                         loss = (
-                            loss
-                            + self.criterion_prox(self.model, self.global_model)
-                            / self.gradient_accumulation_steps
+                            loss + self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
                         )
 
                 # Backward
@@ -193,9 +182,7 @@ class BaseTrainer(FLComponent):
                     if self.logger is not None:
                         step = self.current_step / self.gradient_accumulation_steps
                         self.logger.add_scalar("Loss/Batch Loss", loss, step)
-                        self.logger.add_scalar(
-                            "Learning Rate", self.sch.get_last_lr()[-1], step
-                        )
+                        self.logger.add_scalar("Learning Rate", self.sch.get_last_lr()[-1], step)
 
                 # Update progress bar
                 pbar.set_postfix(loss=f"{loss.item():.2f}")
@@ -216,9 +203,7 @@ class BaseTrainer(FLComponent):
             )
             # Post-train accuracy every 5 rounds starting from the 5th round
             if self.current_round % 5 == 0 and self.current_round > 4:
-                post_train_acc = next(
-                    iter(self.validator.run(self.model, data_loader).values())
-                )
+                post_train_acc = next(iter(self.validator.run(self.model, data_loader).values()))
                 self.logger.add_scalar(
                     "Accuracy/Post-Train Train Accuracy",
                     post_train_acc,
@@ -247,9 +232,7 @@ class BaseTrainer(FLComponent):
     def cleanup(self):
 
         # Save opt & sch states
-        self.opt_state = (
-            deepcopy(self.opt.state_dict()) if self.optim_resume == "resume" else None
-        )
+        self.opt_state = deepcopy(self.opt.state_dict()) if self.optim_resume == "resume" else None
         self.sch_state = deepcopy(self.sch.state_dict())
 
         # Cleanup opt, sch & models
@@ -298,16 +281,14 @@ class BaseTrainer(FLComponent):
         logger: Optional[SummaryWriter] = None,
         abort_signal: Optional[Any] = None,
         fl_ctx=None,
-        privacy_engine=None
+        privacy_engine=None,
     ):
 
         self.setup(model, logger, data_loader, num_steps, abort_signal)
         self.model.train()
 
         data_loader = privacy_engine._prepare_data_loader(
-            data_loader=data_loader,
-            distributed=False,
-            poisson_sampling=True
+            data_loader=data_loader, distributed=False, poisson_sampling=True
         )
 
         sample_rate = 1 / len(data_loader)
@@ -325,9 +306,7 @@ class BaseTrainer(FLComponent):
             grad_sample_mode="hooks",
         )
 
-        self.opt.attach_step_hook(
-            privacy_engine.accountant.get_optimizer_hook_fn(sample_rate=sample_rate)
-        )
+        self.opt.attach_step_hook(privacy_engine.accountant.get_optimizer_hook_fn(sample_rate=sample_rate))
 
         self.training_loop(data_loader, num_steps)
         self.current_round += 1
@@ -383,9 +362,7 @@ class PartPrivateTrainer(BaseTrainer):
 
     def cleanup(self):
 
-        self.opt_state = (
-            deepcopy(self.opt.state_dict()) if self.optim_resume == "resume" else None
-        )
+        self.opt_state = deepcopy(self.opt.state_dict()) if self.optim_resume == "resume" else None
         self.sch_state = deepcopy(self.sch.state_dict())
 
         self.private_layer_state = {}
@@ -451,16 +428,12 @@ class PartPrivateTrainer(BaseTrainer):
                     else:
                         interp_ratio = 1
                 elif self.interp_method == "const":
-                    self.log_info(
-                        fl_ctx, f"Round {self.current_round}: interp method is const"
-                    )
+                    self.log_info(fl_ctx, f"Round {self.current_round}: interp method is const")
                     interp_ratio = 0.5
 
                 for k, v in self.private_layer_state.items():
                     shared_model_value = model.state_dict()[k]
-                    final_dict[k] = v * interp_ratio + shared_model_value * (
-                        1 - interp_ratio
-                    )
+                    final_dict[k] = v * interp_ratio + shared_model_value * (1 - interp_ratio)
             else:
                 final_dict = deepcopy(self.private_layer_state)
             self.log_info(fl_ctx, f"Loading {list(final_dict.keys())} into model")
@@ -497,7 +470,6 @@ class PartPrivateTrainer(BaseTrainer):
 
 
 class ScaffoldTrainer(BaseTrainer):
-
     def __init__(self, config, class_weights):
         super().__init__(config, class_weights)
         self.scaffold_helper = AltScaffoldHelper()
@@ -547,9 +519,7 @@ class ScaffoldTrainer(BaseTrainer):
         model.load_state_dict(ckpt["model"])
         return model
 
-    def training_loop(
-        self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"
-    ):
+    def training_loop(self, data_loader: DataLoader, num_steps: int, device: str = "cuda:0"):
 
         # if steps_or_epochs is epochs, num_steps given to training_loop
         # is the number of epochs, otherwise it is the number of steps
@@ -571,14 +541,10 @@ class ScaffoldTrainer(BaseTrainer):
                     image = batch["image"].to(device)
                     label = batch["label"].to(device)
                     preds = self.model(image)
-                    loss = (
-                        self.criterion(preds, label) / self.gradient_accumulation_steps
-                    )
+                    loss = self.criterion(preds, label) / self.gradient_accumulation_steps
                     if self.criterion_prox is not None:
                         loss = (
-                            loss
-                            + self.criterion_prox(self.model, self.global_model)
-                            / self.gradient_accumulation_steps
+                            loss + self.criterion_prox(self.model, self.global_model) / self.gradient_accumulation_steps
                         )
 
                 # Backward
@@ -619,9 +585,7 @@ class ScaffoldTrainer(BaseTrainer):
                     if self.logger is not None:
                         step = self.current_step / self.gradient_accumulation_steps
                         self.logger.add_scalar("Loss/Batch Loss", loss, step)
-                        self.logger.add_scalar(
-                            "Learning Rate", self.sch.get_last_lr()[-1], step
-                        )
+                        self.logger.add_scalar("Learning Rate", self.sch.get_last_lr()[-1], step)
 
                 # Update progress bar
                 pbar.set_postfix(loss=f"{loss.item():.2f}")
@@ -650,9 +614,7 @@ class ScaffoldTrainer(BaseTrainer):
             )
             # Post-train accuracy every 5 rounds starting from the 5th round
             if self.current_round % 5 == 0 and self.current_round > 4:
-                post_train_acc = next(
-                    iter(self.validator.run(self.model, data_loader).values())
-                )
+                post_train_acc = next(iter(self.validator.run(self.model, data_loader).values()))
                 self.logger.add_scalar(
                     "Accuracy/Post-Train Train Accuracy",
                     post_train_acc,
@@ -664,14 +626,11 @@ def get_trainer(method, config, class_weights, **kwargs):
     if method in ["fedavg", "fedprox", "fedopt"]:
         return BaseTrainer(config, class_weights)
     elif method == "fedbn":
-        return PartPrivateTrainer(
-            config, class_weights, private_layers=["bn"])
+        return PartPrivateTrainer(config, class_weights, private_layers=["bn"])
     elif method == "fedattn":
         return PartPrivateTrainer(config, class_weights, private_layers=["attn", "se"])
     elif method == "fedper":
-        return PartPrivateTrainer(
-            config, class_weights, private_layers=["fc"], exclude_vars=["se", "attn_last"]
-        )
+        return PartPrivateTrainer(config, class_weights, private_layers=["fc"], exclude_vars=["se", "attn_last"])
     elif method == "scaffold":
         trainer = ScaffoldTrainer(config, class_weights)
         exclude_vars = ["num_batches_tracked"]

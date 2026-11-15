@@ -36,42 +36,44 @@ class ChestDataModule:
         self.batch_size = batch_size
         self.cache_rate = cache_rate
 
-        self.transform_train = A.Compose([
-            A.ShiftScaleRotate(
-                shift_limit_x=0.1,
-                shift_limit_y=0.1,
-                border_mode=0,
-                value=np.random.randint(0, 255),
-                scale_limit=0.1,
-                rotate_limit=15,
-                p=0.5,
-            ),
-            A.CoarseDropout(
-                max_holes=3,
-                max_height=70,
-                max_width=70,
-                min_holes=1,
-                min_height=30,
-                min_width=30,
-                fill_value=np.random.randint(0, 255),
-                p=0.5,
-            ),
-            A.RandomCrop(200, 200),
-            A.Resize(224, 224),
-            A.Normalize(mean=0.5, std=0.25, always_apply=True),
-        ])
+        self.transform_train = A.Compose(
+            [
+                A.ShiftScaleRotate(
+                    shift_limit_x=0.1,
+                    shift_limit_y=0.1,
+                    border_mode=0,
+                    value=np.random.randint(0, 255),
+                    scale_limit=0.1,
+                    rotate_limit=15,
+                    p=0.5,
+                ),
+                A.CoarseDropout(
+                    max_holes=3,
+                    max_height=70,
+                    max_width=70,
+                    min_holes=1,
+                    min_height=30,
+                    min_width=30,
+                    fill_value=np.random.randint(0, 255),
+                    p=0.5,
+                ),
+                A.RandomCrop(200, 200),
+                A.Resize(224, 224),
+                A.Normalize(mean=0.5, std=0.25, always_apply=True),
+            ]
+        )
 
-        self.transform_valid = A.Compose([
-            A.Normalize(mean=0.5, std=0.25, always_apply=True),
-        ])
+        self.transform_valid = A.Compose(
+            [
+                A.Normalize(mean=0.5, std=0.25, always_apply=True),
+            ]
+        )
 
         datalist_paths = os.path.join(data_dir, "datalists")
         if central:
             client_datalist = os.path.join(datalist_paths, "client_All.json")
         else:
-            client_datalist = os.path.join(
-                datalist_paths, client_idx + ".json"
-            )
+            client_datalist = os.path.join(datalist_paths, client_idx + ".json")
 
         # read the class counts from the summary file
         summary_file = os.path.join(datalist_paths, client_idx + "_summary.txt")
@@ -113,9 +115,7 @@ class ChestDataModule:
             # worker_init_fn=seed_worker,
             # generator=g,
         )
-        self.val_dataloader = DataLoader(
-            self.valid_dataset, batch_size=100, shuffle=False, num_workers=6
-        )
+        self.val_dataloader = DataLoader(self.valid_dataset, batch_size=100, shuffle=False, num_workers=6)
 
     def teardown(self):
         self.train_dataset = {}
@@ -125,7 +125,6 @@ class ChestDataModule:
 
 
 class CacheDataset(Dataset):
-
     def __init__(self, data, transform, cache_rate=1.0, num_workers=1):
 
         self.data = data
@@ -143,24 +142,15 @@ class CacheDataset(Dataset):
         self.cache_num = min(int(lgth * self.set_rate), lgth)
         indices = list(range(self.cache_num))
         with ThreadPool(self.num_workers) as p:
-            self._cache = list(
-                tqdm(
-                    p.imap(self._load_cache_item, indices),
-                    total=len(indices),
-                    desc="Loading dataset"
-                )
-            )
+            self._cache = list(tqdm(p.imap(self._load_cache_item, indices), total=len(indices), desc="Loading dataset"))
 
         return
 
     def _load_cache_item(self, idx: int):
-        image_path = self.data[idx]['image']
+        image_path = self.data[idx]["image"]
         image = np.array(Image.open(image_path))
-        label = self.data[idx]['label']
-        item = {
-            "image": np.ascontiguousarray(image),
-            "label": np.ascontiguousarray(label)
-        }
+        label = self.data[idx]["label"]
+        item = {"image": np.ascontiguousarray(image), "label": np.ascontiguousarray(label)}
 
         return item
 
@@ -172,29 +162,23 @@ class CacheDataset(Dataset):
             # deepcopy so we don't mess with the cache
             data = deepcopy(data)
             if self.transform is not None:
-                augmented = self.transform(image=data['image'])
+                augmented = self.transform(image=data["image"])
                 image = augmented["image"]
             image = np.expand_dims(image, 0).astype(np.float32)
 
-            return {
-                "image": torch.from_numpy(image),
-                "label": torch.tensor(data['label'])
-            }
+            return {"image": torch.from_numpy(image), "label": torch.tensor(data["label"])}
         else:
             # data has not been cached
-            image_path = self.data[index]['image']
+            image_path = self.data[index]["image"]
             image = np.array(Image.open(image_path))
-            label = self.data[index]['label']
+            label = self.data[index]["label"]
 
             if self.transform is not None:
                 augmented = self.transform(image=image)
                 image = augmented["image"]
             image = np.expand_dims(image, 0).astype(np.float32)
 
-            return {
-                "image": torch.from_numpy(image),
-                "label": torch.tensor(label)
-            }
+            return {"image": torch.from_numpy(image), "label": torch.tensor(label)}
 
     def __len__(self) -> int:
         return len(self.data)

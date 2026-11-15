@@ -10,7 +10,7 @@ NUM_CLASSES = 9
 def resnet_50(seed):
     seed_everything(seed)
     bb = timm.create_model(
-        'resnet50.ra_in1k',
+        "resnet50.ra_in1k",
         pretrained=False,
         num_classes=NUM_CLASSES,
     )
@@ -20,7 +20,7 @@ def resnet_50(seed):
 def resnet_50_supervised(seed):
     seed_everything(seed)
     bb = timm.create_model(
-        'resnet50.ra_in1k',
+        "resnet50.ra_in1k",
         pretrained=True,
         num_classes=NUM_CLASSES,
     )
@@ -31,7 +31,7 @@ def seresnet_50_supervised(seed):
     # Image size: train = 224 x 224, test = 288 x 288
     seed_everything(seed)
     model = timm.create_model(
-        'seresnet50.ra2_in1k',
+        "seresnet50.ra2_in1k",
         pretrained=True,
         num_classes=NUM_CLASSES,
     )
@@ -41,7 +41,7 @@ def seresnet_50_supervised(seed):
 def nf_resnet50_supervised(seed):
     seed_everything(seed)
     model = timm.create_model(
-        'nf_resnet50.ra2_in1k',
+        "nf_resnet50.ra2_in1k",
         pretrained=True,
         num_classes=NUM_CLASSES,
     )
@@ -53,7 +53,7 @@ def nf_seresnet50_pretrained(seed):
         "nf_seresnet50",
         pretrained=True,
         pretrained_cfg_overlay=pretrained_overlay("nf_seresnet50"),
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
     )
     return model
 
@@ -61,7 +61,7 @@ def nf_seresnet50_pretrained(seed):
 def resnet50_gn_supervised(seed):
     seed_everything(seed)
     model = timm.create_model(
-        'resnet50_gn.a1h_in1k',
+        "resnet50_gn.a1h_in1k",
         pretrained=True,
         num_classes=NUM_CLASSES,
     )

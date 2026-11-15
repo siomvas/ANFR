@@ -35,9 +35,8 @@ class ColonDataModule:
                 transforms.ToTensor(),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
-                transforms.ColorJitter(
-                    brightness=0.2, contrast=0.5, saturation=0.5, hue=0.2),
-                transforms.RandomErasing(value='random')
+                transforms.ColorJitter(brightness=0.2, contrast=0.5, saturation=0.5, hue=0.2),
+                transforms.RandomErasing(value="random"),
             ]
         )
         self.transform_valid = transforms.Compose(
@@ -51,16 +50,12 @@ class ColonDataModule:
     def setup(self):
 
         if self.central is False:
-            site_idx_train_name = os.path.join(
-                self.idx_root, self.client_idx + "-train" + ".npy"
-            )
+            site_idx_train_name = os.path.join(self.idx_root, self.client_idx + "-train" + ".npy")
 
             if os.path.exists(site_idx_train_name):
                 site_idx_train = np.load(site_idx_train_name).tolist()
             else:
-                raise ValueError(
-                    f"File {site_idx_train_name} does not exist!"
-                )
+                raise ValueError(f"File {site_idx_train_name} does not exist!")
         else:
             site_idx_train = None
 
@@ -98,9 +93,7 @@ class ColonDataModule:
             worker_init_fn=seed_worker,
             generator=g,
         )
-        self.val_dataloader = DataLoader(
-            self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=8
-        )
+        self.val_dataloader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=8)
 
     def teardown(self):
         self.train_dataset = {}
@@ -110,13 +103,13 @@ class ColonDataModule:
 
 
 class ColonDataset(torch.utils.data.Dataset):
-    def __init__(self, npz_file, indices=None,  part="train", transform=None, target_transform=None):
+    def __init__(self, npz_file, indices=None, part="train", transform=None, target_transform=None):
         if indices:
-            self.images = np.load(npz_file, mmap_mode='r')[f"{part}_images"][indices].copy()
-            self.labels = np.load(npz_file, mmap_mode='r')[f"{part}_labels"][indices].copy()
+            self.images = np.load(npz_file, mmap_mode="r")[f"{part}_images"][indices].copy()
+            self.labels = np.load(npz_file, mmap_mode="r")[f"{part}_labels"][indices].copy()
         else:
-            self.images = np.load(npz_file, mmap_mode='r')[f"{part}_images"].copy()
-            self.labels = np.load(npz_file, mmap_mode='r')[f"{part}_labels"].copy()
+            self.images = np.load(npz_file, mmap_mode="r")[f"{part}_images"].copy()
+            self.labels = np.load(npz_file, mmap_mode="r")[f"{part}_labels"].copy()
         self.transform = transform
         self.target_transform = target_transform
 

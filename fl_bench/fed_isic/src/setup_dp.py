@@ -24,13 +24,9 @@ def main():
         default="onecycle",
         choices=["none", "warmcosine", "cosine", "onecycle"],
     )
-    parser.add_argument(
-        "--steps_or_epochs", type=str, default="steps", choices=["steps", "epochs"]
-    )
+    parser.add_argument("--steps_or_epochs", type=str, default="steps", choices=["steps", "epochs"])
     parser.add_argument("-seed", type=int, default=222)
-    parser.add_argument(
-        "--optim_resume", type=str, default="restart", choices=["restart", "resume"]
-    )
+    parser.add_argument("--optim_resume", type=str, default="restart", choices=["restart", "resume"])
     parser.add_argument("--fedprox_mu", type=float, default=0.0)
     parser.add_argument(
         "--grad_clipping_type",
@@ -55,15 +51,9 @@ def main():
     args = parser.parse_args()
 
     job_name = os.path.basename(args.job)
-    client_config_filename = os.path.join(
-        args.job, job_name, "config", "config_fed_client.json"
-    )
-    server_config_filename = os.path.join(
-        args.job, job_name, "config", "config_fed_server.json"
-    )
-    train_config_filename = os.path.join(
-        args.job, job_name, "config", "config_train.json"
-    )
+    client_config_filename = os.path.join(args.job, job_name, "config", "config_fed_client.json")
+    server_config_filename = os.path.join(args.job, job_name, "config", "config_fed_server.json")
+    train_config_filename = os.path.join(args.job, job_name, "config", "config_train.json")
     meta_config_filename = os.path.join(args.job, "meta.json")
 
     client_config = read_json(client_config_filename)
@@ -107,13 +97,9 @@ def main():
 
     # FedOpt requires a different shareable generator
     if args.method == "fedopt":
-        server_config["workflows"][0]["args"][
-            "shareable_generator_id"
-        ] = "shareable_generator_fedopt"
+        server_config["workflows"][0]["args"]["shareable_generator_id"] = "shareable_generator_fedopt"
     else:
-        server_config["workflows"][0]["args"][
-            "shareable_generator_id"
-        ] = "shareable_generator_base"
+        server_config["workflows"][0]["args"]["shareable_generator_id"] = "shareable_generator_base"
 
     # SCAFFOLD requires:
     # 1. A different trainer (automatic change via config)
@@ -128,9 +114,7 @@ def main():
                 "filters": [
                     {
                         "name": "ExcludeVars",
-                        "args": {
-                            "exclude_vars": "(?:num_batches_tracked)|(?:attn.relative_position_index)"
-                        },
+                        "args": {"exclude_vars": "(?:num_batches_tracked)|(?:attn.relative_position_index)"},
                     }
                 ],
             }
@@ -181,9 +165,7 @@ def main():
     server_config = read_json(server_config_filename)
     client_config = read_json(client_config_filename)
     server_config["hyperion"] = True if args.use_hyperion_dirs else False
-    client_config["components"][0]["args"]["hyperion"] = (
-        True if args.use_hyperion_dirs else False
-    )
+    client_config["components"][0]["args"]["hyperion"] = True if args.use_hyperion_dirs else False
     write_json(server_config, server_config_filename)
     write_json(client_config, client_config_filename)
     print(f"Setting hyperion = {args.use_hyperion_dirs}")

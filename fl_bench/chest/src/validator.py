@@ -1,8 +1,7 @@
 import numpy as np
 import torch
 from monai.transforms import Activations
-from sklearn.metrics import (multilabel_confusion_matrix, roc_auc_score,
-                             roc_curve)
+from sklearn.metrics import multilabel_confusion_matrix, roc_auc_score, roc_curve
 from tqdm import tqdm
 
 cls_map = [
@@ -13,7 +12,7 @@ cls_map = [
     "Effusion",
     "No Finding",
     "Pneumonia",
-    "Pneumothorax"
+    "Pneumothorax",
 ]
 
 
@@ -31,10 +30,7 @@ class Validator:
 
         with torch.no_grad():
             with torch.cuda.amp.autocast():
-                for batch in tqdm(
-                    data_loader,
-                    desc="Validation DataLoader", dynamic_ncols=True
-                ):
+                for batch in tqdm(data_loader, desc="Validation DataLoader", dynamic_ncols=True):
                     batch["image"] = batch["image"].to("cuda:0")
                     batch["label"] = batch["label"].to("cuda:0")
                     batch["preds"] = model(batch["image"])
@@ -65,7 +61,7 @@ class Validator:
             metrics["macro_sensitivity"] = 0
             metrics["macro_precision"] = 0
             metrics["optimal_thresholds"] = [0] * y_pred.shape[1]
-            return metrics        
+            return metrics
         y_pred_np = y_pred.numpy(force=True)
         y_np = y.numpy(force=True)
 
@@ -80,9 +76,7 @@ class Validator:
         # to find the optimal threshold for each class
         optimal_thresholds = np.zeros(y.shape[1])
         for class_idx in range(y_np.shape[1]):
-            fpr, tpr, thresholds = roc_curve(
-                y_np[:, class_idx], y_pred_np[:, class_idx]
-            )
+            fpr, tpr, thresholds = roc_curve(y_np[:, class_idx], y_pred_np[:, class_idx])
             optimal_thresholds[class_idx] = thresholds[np.argmax(tpr - fpr)]
         bin_labels = (y_pred_np > optimal_thresholds).astype(np.int32)
 

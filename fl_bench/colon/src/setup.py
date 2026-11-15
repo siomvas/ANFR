@@ -16,7 +16,9 @@ def main():
     parser.add_argument(
         "--opt_args", type=str, default=argparse.SUPPRESS, help="optimizer arguments, pass as 'k:v, k:v'"
     )
-    parser.add_argument("--scheduler", type=str, default="onecycle", choices=["none", "warmcosine", "cosine", "onecycle"])
+    parser.add_argument(
+        "--scheduler", type=str, default="onecycle", choices=["none", "warmcosine", "cosine", "onecycle"]
+    )
     parser.add_argument("--steps_or_epochs", type=str, default="steps", choices=["steps", "epochs"])
     parser.add_argument("-seed", type=int, default=222)
     parser.add_argument("--optim_resume", type=str, default="restart", choices=["restart", "resume"])
@@ -25,9 +27,15 @@ def main():
     parser.add_argument("--grad_clipping_value", type=float, default=1.0)
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--use_hyperion_dirs", action="store_true")
-    parser.add_argument("--interp_method", type=str, default="", choices=["", "linear", "inverse_linear", "fixbn", "const"])
+    parser.add_argument(
+        "--interp_method", type=str, default="", choices=["", "linear", "inverse_linear", "fixbn", "const"]
+    )
     parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--train_split_root", type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "splits", "combo") + os.sep)
+    parser.add_argument(
+        "--train_split_root",
+        type=str,
+        default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "splits", "combo") + os.sep,
+    )
 
     args = parser.parse_args()
 
@@ -122,8 +130,8 @@ def main():
     else:
         server_config["task_result_filters"] = []
         for i in [4, 5]:
-            if server_config['components'][i]['id'] == 'aggregator':
-                server_config['components'][i]['args']['expected_data_kind'] = "WEIGHT_DIFF"
+            if server_config["components"][i]["id"] == "aggregator":
+                server_config["components"][i]["args"]["expected_data_kind"] = "WEIGHT_DIFF"
         server_config["workflows"][0]["name"] = "ScatterAndGather"
     if args.method == "fedattn" or args.method == "fedper":
         # server_config["components"][4]["args"]["exclude_vars"] = "attn|se"
@@ -166,9 +174,15 @@ def main():
     print(f"Setting hyperion = {args.use_hyperion_dirs}")
 
     misc_optional_args = [
-        "scheduler", "optim_resume", "batch_size", "interp_method",
-        "cache_rate", "fedprox_mu", "grad_clipping_type",
-        "grad_clipping_value", "steps_or_epochs"
+        "scheduler",
+        "optim_resume",
+        "batch_size",
+        "interp_method",
+        "cache_rate",
+        "fedprox_mu",
+        "grad_clipping_type",
+        "grad_clipping_value",
+        "steps_or_epochs",
     ]
     for arg in misc_optional_args:
         if arg in args:

@@ -11,6 +11,7 @@ Weights are looked up in this order:
    timm training checkpoint ``<architecture>.pth.tar``.
 2. The Hugging Face Hub repository listed in ``HF_HUB_IDS``.
 """
+
 import os
 
 from timm.models import nfnet as _nfnet
@@ -27,13 +28,9 @@ HF_HUB_IDS = {
 }
 
 if "nf_cbamresnet50" not in _nfnet.model_cfgs:
-    _nfnet.model_cfgs["nf_cbamresnet50"] = _nfnet._nfres_cfg(
-        depths=(3, 4, 6, 3), attn_layer="cbam", attn_kwargs=dict()
-    )
+    _nfnet.model_cfgs["nf_cbamresnet50"] = _nfnet._nfres_cfg(depths=(3, 4, 6, 3), attn_layer="cbam", attn_kwargs=dict())
 
-    default_cfgs = generate_default_cfgs(
-        {"nf_cbamresnet50": _nfnet._dcfg(url="", first_conv="stem.conv")}
-    )
+    default_cfgs = generate_default_cfgs({"nf_cbamresnet50": _nfnet._dcfg(url="", first_conv="stem.conv")})
 
     @register_model
     def nf_cbamresnet50(pretrained=False, **kwargs):

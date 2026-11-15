@@ -94,9 +94,7 @@ class FedISICLearner(Learner):
 
         self.dsize = N
         self.delta = 1 / self.dsize
-        self.log_info(
-            fl_ctx, f"Train dataset size: {self.dsize}. Setting delta to {self.delta}"
-        )
+        self.log_info(fl_ctx, f"Train dataset size: {self.dsize}. Setting delta to {self.delta}")
         self.local_steps = config_train["local_steps"]
         self.key_metric = "balanced_accuracy"
         self.best_metric = 0.0
@@ -128,21 +126,15 @@ class FedISICLearner(Learner):
                 )
                 return make_reply(ReturnCode.ERROR)
             dxo_global_weights = dxo_collection.data.get(AppConstants.MODEL_WEIGHTS)
-            dxo_global_ctrl_weights = dxo_collection.data.get(
-                AlgorithmConstants.SCAFFOLD_CTRL_GLOBAL
-            )
+            dxo_global_ctrl_weights = dxo_collection.data.get(AlgorithmConstants.SCAFFOLD_CTRL_GLOBAL)
             if dxo_global_ctrl_weights is None:
-                self.log_error(
-                    fl_ctx, "DXO collection doesn't contain the SCAFFOLD controls!"
-                )
+                self.log_error(fl_ctx, "DXO collection doesn't contain the SCAFFOLD controls!")
                 return make_reply(ReturnCode.EXECUTION_EXCEPTION)
             # convert to tensor and load into c_global model
             global_ctrl_weights = dxo_global_ctrl_weights.data
             for k in global_ctrl_weights.keys():
                 global_ctrl_weights[k] = torch.as_tensor(global_ctrl_weights[k])
-            self.trainer.scaffold_helper.load_global_controls(
-                weights=global_ctrl_weights
-            )
+            self.trainer.scaffold_helper.load_global_controls(weights=global_ctrl_weights)
 
             # modify shareable to only contain global weights so normal training can proceed
             data = dxo_global_weights.update_shareable(data)
@@ -172,12 +164,8 @@ class FedISICLearner(Learner):
                     self.log_warning(fl_ctx, "Something wrong in training, retrying.")
                     # Restore trainer states to the beginning of the round
                     if os.path.exists(self.last_model_path):
-                        self.log_warning(
-                            fl_ctx, f"Loading last model from {self.last_model_path}"
-                        )
-                        self.trainer.load_checkpoint(
-                            self.last_model_path, self.model, fl_ctx=fl_ctx
-                        )
+                        self.log_warning(fl_ctx, f"Loading last model from {self.last_model_path}")
+                        self.trainer.load_checkpoint(self.last_model_path, self.model, fl_ctx=fl_ctx)
                         load_weights(self.model._module, global_weights)
                         self.model = self.model.to(self.device)
                     # Reset dataset & dataloader
@@ -195,7 +183,7 @@ class FedISICLearner(Learner):
                 if i < self.max_retry:
                     self.log_warning(
                         fl_ctx,
-                        f"Something wrong in val, retrying ({i+1}/{self.max_retry}).",
+                        f"Something wrong in val, retrying ({i + 1}/{self.max_retry}).",
                     )
                     # Reset dataset & dataloader
                     self.dm.teardown()
@@ -208,9 +196,7 @@ class FedISICLearner(Learner):
         table.field_names = ["Metric", "Value"]
         for m, v in metrics.items():
             table.add_row([m, v])
-            self.writer.add_scalar(
-                "Accuracy/Post-Train Val Accuracy", v, self.trainer.current_step
-            )
+            self.writer.add_scalar("Accuracy/Post-Train Val Accuracy", v, self.trainer.current_step)
         self.log_info(fl_ctx, str(table))
 
         epsilon = self.privacy_engine.get_epsilon(delta=self.delta)
@@ -280,9 +266,7 @@ class FedISICLearner(Learner):
             dxo = dxo.data.get(AppConstants.MODEL_WEIGHTS)
 
         if not dxo.data_kind == DataKind.WEIGHTS:
-            self.log_exception(
-                fl_ctx, f"DXO is of type {dxo.data_kind} but expected type WEIGHTS"
-            )
+            self.log_exception(fl_ctx, f"DXO is of type {dxo.data_kind} but expected type WEIGHTS")
             return make_reply(ReturnCode.BAD_TASK_DATA)
 
         # load global weights to model
@@ -295,9 +279,7 @@ class FedISICLearner(Learner):
                 break
             except Exception as e:
                 if i < self.max_retry:
-                    self.log_warning(
-                        fl_ctx, "Error encountered in validation, retrying."
-                    )
+                    self.log_warning(fl_ctx, "Error encountered in validation, retrying.")
                     # Cleanup previous dataset & dataloader
                     self.dm.teardown()
                     self.dm.setup()
@@ -306,8 +288,7 @@ class FedISICLearner(Learner):
 
         self.log_info(
             fl_ctx,
-            f"Validation metrics of {model_owner}'s model on"
-            f" {fl_ctx.get_identity_name()}'s data: {raw_metrics}",
+            f"Validation metrics of {model_owner}'s model on {fl_ctx.get_identity_name()}'s data: {raw_metrics}",
         )
 
         if validate_type == ValidateType.BEFORE_TRAIN_VALIDATE:
@@ -329,14 +310,10 @@ class FedISICLearner(Learner):
             try:
                 if model_name == ModelName.FINAL_MODEL:
                     model_data = torch.load(self.last_model_path, map_location="cpu")
-                    self.log_info(
-                        fl_ctx, f"Load final model from {self.last_model_path}"
-                    )
+                    self.log_info(fl_ctx, f"Load final model from {self.last_model_path}")
                 else:
                     model_data = torch.load(self.best_model_path, map_location="cpu")
-                    self.log_info(
-                        fl_ctx, f"Load best model from {self.best_model_path}"
-                    )
+                    self.log_info(fl_ctx, f"Load best model from {self.best_model_path}")
             except Exception as e:
                 self.log_error(fl_ctx, f"Unable to load model: {e}")
 

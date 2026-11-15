@@ -34,7 +34,7 @@ class ReportGenerator(Widget):
         self,
         results_dir: Union[str, Path] = AppConstants.CROSS_VAL_DIR,
         report_path: Union[str, Path] = "cross_val_results_pretty.json",
-        metric_type='single',
+        metric_type="single",
         metric_name=None,
     ):
         super(ReportGenerator, self).__init__()
@@ -75,29 +75,25 @@ class ReportGenerator(Widget):
                         )
                         if model_owner == "SRV_server":
                             self.order.append(data_client)
-                            if self.metric_type == 'specific':
+                            if self.metric_type == "specific":
                                 self.final_avg.append(dxo.data[self.metric_name])
-                            elif self.metric_type == 'single':
+                            elif self.metric_type == "single":
                                 self.final_avg.append(*dxo.data.values())
-                            elif self.metric_type == 'multi':
+                            elif self.metric_type == "multi":
                                 nest = {"data_owner": data_client, "metrics": dxo.data}
                                 self.final_avg.append(nest)
                             else:
-                                self.log_error(
-                                    fl_ctx, f"Unknown metric type {self.metric_type}", fire_event=False
-                                )
+                                self.log_error(fl_ctx, f"Unknown metric type {self.metric_type}", fire_event=False)
                         elif model_owner == data_client:
-                            if self.metric_type == 'specific':
+                            if self.metric_type == "specific":
                                 self.pfl_avg.append(dxo.data[self.metric_name])
-                            elif self.metric_type == 'single':
+                            elif self.metric_type == "single":
                                 self.pfl_avg.append(*dxo.data.values())
-                            elif self.metric_type == 'multi':
+                            elif self.metric_type == "multi":
                                 nest = {"data_owner": data_client, "metrics": dxo.data}
                                 self.pfl_avg.append(nest)
                             else:
-                                self.log_error(
-                                    fl_ctx, f"Unknown metric type {self.metric_type}", fire_event=False
-                                )
+                                self.log_error(fl_ctx, f"Unknown metric type {self.metric_type}", fire_event=False)
                     else:
                         self.log_error(
                             fl_ctx, f"Expected dxo of kind METRICS but got {dxo.data_kind}", fire_event=False
@@ -122,11 +118,11 @@ class ReportGenerator(Widget):
                     f.write(pretty_json_str)
                     f.write("\n")
                     f.write("Order \n")
-                    f.write(f'{self.order} \n')
+                    f.write(f"{self.order} \n")
                     f.write("Average Metrics \n")
-                    f.write(f'{self.final_avg} \n')
+                    f.write(f"{self.final_avg} \n")
                     f.write("PFL Metrics \n")
-                    f.write(f'{self.pfl_avg} \n')
+                    f.write(f"{self.pfl_avg} \n")
             else:  # ".yaml" or ".yml"
                 yaml = YAML()
                 with open(output_file_path, "w") as f:
