@@ -1,11 +1,12 @@
 import os
 import timm
+from fl_bench.networks.anfr import pretrained_overlay
 import torch
 import torch.nn as nn
 from timm.layers import LayerNorm2d
 from fl_bench.utils.misc import seed_everything
 
-model_dir = "/path/to/model_weights"
+model_dir = os.environ.get("MODEL_WEIGHTS_DIR", "weights")
 torch.hub.set_dir(model_dir)
 
 NUM_CLASSES = 8
@@ -23,14 +24,12 @@ def resnet_50(seed):
 
 def resnet_50_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
         'resnet50.ra_in1k',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1
     )
-    os.environ['https_proxy'] = ''
     return bb
 
 resnet_50_pretrained = resnet_50_supervised
@@ -47,7 +46,6 @@ def seresnet_50(seed):
 
 def seresnet_50_supervised(seed):
     # Image size: train = 224 x 224, test = 288 x 288
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     seed_everything(seed)
     model = timm.create_model(
         'seresnet50.ra2_in1k',
@@ -55,7 +53,6 @@ def seresnet_50_supervised(seed):
         num_classes=NUM_CLASSES,
         in_chans=1
     )
-    os.environ['https_proxy'] = ''
     return model
 
 def nf_resnet50(seed):
@@ -70,14 +67,12 @@ def nf_resnet50(seed):
 
 def nf_resnet50_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'nf_resnet50.ra2_in1k',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1
     )
-    os.environ['https_proxy'] = ''
     return model
 
 def nf_se_resnet50(seed):
@@ -92,18 +87,15 @@ def nf_se_resnet50(seed):
 
 def caformer_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'caformer_s18.sail_in1k',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1
         )
-    os.environ['https_proxy'] = ''
     return model
 
 def resnet50_v2_supervised(seed):
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     seed_everything(seed)
     model = timm.create_model(
         'resnetv2_50.a1h_in1k',
@@ -111,11 +103,9 @@ def resnet50_v2_supervised(seed):
         num_classes=NUM_CLASSES,
         in_chans=1
     )
-    os.environ['https_proxy'] = ''
     return model
 
 def resnet50_gn_supervised(seed):
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     seed_everything(seed)
     model = timm.create_model(
         'resnet50_gn.a1h_in1k',
@@ -123,11 +113,9 @@ def resnet50_gn_supervised(seed):
         num_classes=NUM_CLASSES,
         in_chans=1
     )
-    os.environ['https_proxy'] = ''
     return model
 
 def resnet50_gn(seed):
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     seed_everything(seed)
     model = timm.create_model(
         'resnet50_gn.a1h_in1k',
@@ -135,14 +123,13 @@ def resnet50_gn(seed):
         num_classes=NUM_CLASSES,
         in_chans=1
     )
-    os.environ['https_proxy'] = ''
     return model
 
 def nf_seresnet50_pretrained(seed):
     model = timm.create_model(
         "nf_seresnet50",
         pretrained=True,
-        pretrained_cfg_overlay=dict(file='/path/to/archive/senf_model/model_best.pth.tar'),
+        pretrained_cfg_overlay=pretrained_overlay("nf_seresnet50"),
         num_classes=NUM_CLASSES,
         in_chans=1
     )
@@ -152,7 +139,7 @@ def nf_seresnet50(seed):
     model = timm.create_model(
         "nf_seresnet50",
         pretrained=False,
-        # pretrained_cfg_overlay=dict(file='/path/to/archive/senf_model/model_best.pth.tar'),
+        # pretrained_cfg_overlay=pretrained_overlay("nf_seresnet50"),
         num_classes=NUM_CLASSES,
         in_chans=1
     )
@@ -162,7 +149,7 @@ def nf_ecaresnet50_pretrained(seed):
     model = timm.create_model(
         "nf_ecaresnet50",
         pretrained=True,
-        pretrained_cfg_overlay=dict(file="/path/to/archive/ecanf_model/ecanfresnet50.pth.tar"),
+        pretrained_cfg_overlay=pretrained_overlay("nf_ecaresnet50"),
         num_classes=NUM_CLASSES,
         in_chans=1
     )
@@ -172,7 +159,7 @@ def nf_cbamresnet50_pretrained(seed):
     model = timm.create_model(
         "nf_cbamresnet50",
         pretrained=True,
-        pretrained_cfg_overlay=dict(file="/path/to/archive/cbamnf_model/cbamnf_resnet50.pth.tar"),
+        pretrained_cfg_overlay=pretrained_overlay("nf_cbamresnet50"),
         num_classes=NUM_CLASSES,
         in_chans=1
     )
@@ -189,7 +176,6 @@ def vit_b_16_scratch(seed):
 
 def vit_b_16_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
         'vit_base_patch16_224',
         pretrained=True,
@@ -208,13 +194,11 @@ def resnet_18_scratch(seed):
 
 def resnet_18_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
         'resnet18',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1)
-    os.environ['https_proxy'] = ''
     return bb
 
 def densenet_121_scratch(seed):
@@ -228,13 +212,11 @@ def densenet_121_scratch(seed):
 
 def densenet_121_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
         'densenet121',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1)
-    os.environ['https_proxy'] = ''
     return bb
 
 def convnext_small_scratch(seed):
@@ -247,13 +229,11 @@ def convnext_small_scratch(seed):
 
 def convnext_small_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
         'convnext_small.fb_in1k',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1)
-    os.environ['https_proxy'] = ''
     return bb
 
 def efficientnet_v2_s_scratch(seed):
@@ -266,13 +246,11 @@ def efficientnet_v2_s_scratch(seed):
 
 def efficientnet_v2_s_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
         'tf_efficientnetv2_s.in1k',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1)
-    os.environ['https_proxy'] = ''
     return bb
 
 def wide_resnet_50_2_scratch(seed):
@@ -285,13 +263,11 @@ def wide_resnet_50_2_scratch(seed):
 
 def wide_resnet_50_2_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
         'wide_resnet50_2',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1)
-    os.environ['https_proxy'] = ''
     return bb
 
 def swin_t_scratch(seed):
@@ -304,13 +280,11 @@ def swin_t_scratch(seed):
 
 def swin_t_supervised(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     bb = timm.create_model(
         'swin_tiny_patch4_window7_224',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1)
-    os.environ['https_proxy'] = ''
     return bb
 
 
@@ -349,48 +323,40 @@ def convert_ln_to_dyt(module):
 
 def vit(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'vit_base_patch16_224',
         pretrained=False,
         num_classes=NUM_CLASSES
     )
-    os.environ['https_proxy'] = ''
     return model
 
 def dyt_vit(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'vit_base_patch16_224',
         pretrained=False,
         num_classes=NUM_CLASSES
     )
-    os.environ['https_proxy'] = ''
     model = convert_ln_to_dyt(model)
     return model
 
 def dyt_convnext(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'convnext_base.fb_in1k',
         pretrained=False,
         num_classes=NUM_CLASSES
     )
-    os.environ['https_proxy'] = ''
     model = convert_ln_to_dyt(model)
     return model
 
 def vit_pretrained(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'vit_base_patch16_224',
         pretrained=True,
         num_classes=NUM_CLASSES
     )
-    os.environ['https_proxy'] = ''
     return model
 
 # FedConv
@@ -943,7 +909,7 @@ def fedconv_invertup(pretrained=False, **kwargs):
 
 def fedconv_normal_pretrained(seed):
     model = fedconv_normal(in_chans=1)
-    pretrained_dir = '/path/to/archive/fedconv/fedconv_normal.pth.tar'
+    pretrained_dir = os.path.join(os.environ.get("FEDCONV_WEIGHTS_DIR", "weights/fedconv"), "fedconv_normal.pth.tar")
     checkpoint = torch.load(pretrained_dir, map_location='cpu')
     checkpoint = checkpoint['model']
     checkpoint['stem.0.weight'] = checkpoint['stem.0.weight'].sum(dim=1, keepdim=True)  # convert first conv to 1 channel via sum
@@ -953,7 +919,7 @@ def fedconv_normal_pretrained(seed):
 
 def fedconv_invertup_pretrained(seed):
     model = fedconv_invertup(in_chans=1)
-    pretrained_dir = '/path/to/archive/fedconv/fedconv_invertup.pth.tar'
+    pretrained_dir = os.path.join(os.environ.get("FEDCONV_WEIGHTS_DIR", "weights/fedconv"), "fedconv_invertup.pth.tar")
     checkpoint = torch.load(pretrained_dir, map_location='cpu')
     checkpoint = checkpoint['model']
     checkpoint['stem.0.weight'] = checkpoint['stem.0.weight'].sum(dim=1, keepdim=True)  # convert first conv to 1 channel via sum
@@ -963,12 +929,10 @@ def fedconv_invertup_pretrained(seed):
 
 def vit_small_pretrained(seed):
     seed_everything(seed)
-    os.environ['https_proxy'] = 'http://proxy.example.org:3128'
     model = timm.create_model(
         'vit_small_patch16_224',
         pretrained=True,
         num_classes=NUM_CLASSES,
         in_chans=1
     )
-    os.environ['https_proxy'] = ''
     return model

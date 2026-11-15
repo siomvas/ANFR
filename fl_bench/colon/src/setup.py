@@ -27,7 +27,7 @@ def main():
     parser.add_argument("--use_hyperion_dirs", action="store_true")
     parser.add_argument("--interp_method", type=str, default="", choices=["", "linear", "inverse_linear", "fixbn", "const"])
     parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--train_split_root", type=str, default="/path/to/FL_bench/fl_bench/colon/splits/combo/")
+    parser.add_argument("--train_split_root", type=str, default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "splits", "combo") + os.sep)
 
     args = parser.parse_args()
 
