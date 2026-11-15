@@ -198,6 +198,49 @@ def valid(args, model, val_loader,  test_loader = None, TestFlag = False):
     args.current_acc[args.single_client] = eval_result
 
 
+def valid_alt(args, model, val_loader,  test_loader = None, TestFlag = False):
+ 
+    # validation
+    eval_result, eval_losses = inner_valid(args, model, val_loader)
+
+    if args.dataset == 'celeba': 
+        if args.best_eval_loss[args.single_client] > eval_losses.val:
+            if args.save_model_flag:
+                save_model(args, model)
+
+            args.best_acc[args.single_client] = eval_result
+            args.best_eval_loss[args.single_client] = eval_losses.val
+            print("The updated best metric of client", args.single_client, args.best_acc[args.single_client])
+
+            if TestFlag:
+                test_result, eval_losses = inner_valid(args, model, test_loader, test = True)
+                args.current_test_acc[args.single_client] = test_result
+                print('We also update the test acc of client', args.single_client, 'as',
+                      args.current_test_acc[args.single_client])
+        else:
+            print("Donot replace previous best metric of client", args.best_acc[args.single_client])
+            
+    else: 
+        if metric_evaluation(args, eval_result):
+            if args.save_model_flag:
+                save_model(args, model)
+
+            args.best_acc[args.single_client] = eval_result
+            args.best_eval_loss[args.single_client] = eval_losses.val
+            print("The updated best metric of client", args.single_client, args.best_acc[args.single_client])
+
+        else:
+            print("Donot replace previous best metric of client", args.best_acc[args.single_client])
+
+        if TestFlag:
+            test_result, eval_losses = inner_valid(args, model, test_loader, test =True)
+            args.current_test_acc[args.single_client] = test_result
+            print('We also update the test acc of client', args.single_client, 'as',
+                    args.current_test_acc[args.single_client])
+
+    args.current_acc[args.single_client] = eval_result
+
+
 def optimization_fun(args, model):
 
     # Prepare optimizer, scheduler

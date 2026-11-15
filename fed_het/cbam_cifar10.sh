@@ -1,0 +1,3 @@
+python train_FedAVG.py --FL_platform CBAM-FedAVG --dataset cifar10 --local_epochs 1 --max_communication_rounds 100 --num_local_clients -1 --split_type split_2 --seed 2024 --n 1
+python train_FedAVG.py --FL_platform CBAM-FedAVG --dataset cifar10 --local_epochs 1 --max_communication_rounds 100 --num_local_clients -1 --split_type split_2 --seed 42 --n 1
+python train_FedAVG.py --FL_platform CBAM-FedAVG --dataset cifar10 --local_epochs 1 --max_communication_rounds 100 --num_local_clients -1 --split_type split_2 --seed 1995 --n 1

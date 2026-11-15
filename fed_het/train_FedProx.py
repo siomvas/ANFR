@@ -8,10 +8,11 @@ from copy import deepcopy
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from utils.data_utils import DatasetFLViT, create_dataset_and_evalmetrix
-from utils.util import Partial_Client_Selection, valid, average_model, optimizer_to
+from utils.util import Partial_Client_Selection, valid, valid_alt, average_model, optimizer_to
 from utils.start_config import initization_configure
 from typing import List, Tuple, Union, OrderedDict
 import pandas as pd
+import ast
 
 def train(args, model):
     """ Train the model """
@@ -135,7 +136,10 @@ def train(args, model):
             args.single_client = cur_single_client
             model = model_all[proxy_single_client]
             model.to(args.device)
-            valid(args, model, val_loader_proxy_clients[proxy_single_client], test_loader, TestFlag=True)
+            if args.valid_type == 'orig':
+                valid(args, model, val_loader_proxy_clients[proxy_single_client], test_loader, TestFlag=True)
+            elif args.valid_type == 'alt':
+                valid_alt(args, model, val_loader_proxy_clients[proxy_single_client], test_loader, TestFlag=True)
             model.cpu()
 
         args.record_val_acc = pd.concat([args.record_val_acc, pd.DataFrame([args.current_acc])], ignore_index=True)
@@ -170,6 +174,7 @@ def main():
     # General DL parameters
     parser.add_argument("--FL_platform", type = str, default="ViT-FedAVG",  help="Choose of different FL platform. ")
     parser.add_argument("--norm", type = str, default=None,  help="Selects a normalization layer for the model. Options: BN, LN, GN")
+    parser.add_argument("--valid_type", choices=["orig", "alt"], default="orig", help="Selects whether test accuracy is recorded when the validation accuracy has increased (orig) or always (alt).")
     parser.add_argument("--dataset", choices=["cifar10", "celeba", "pacs", "gldk23", "isic19"], default="cifar10", help="Which dataset.")
     parser.add_argument("--data_path", type=str, default='./data/', help="Where is dataset located.")
 
@@ -182,7 +187,7 @@ def main():
     parser.add_argument("--optimizer_type", default="sgd",choices=["sgd", "adamw"], type=str, help="Ways for optimization.")
     parser.add_argument("--num_workers", default=8, type=int, help="num_workers")
     parser.add_argument("--weight_decay", default=0, choices=[0.05, 0], type=float, help="Weight deay if we apply some. 0 for SGD and 0.05 for AdamW in paper")
-    parser.add_argument('--grad_clip', action='store_true', default=True, help="whether gradient clip to 1 or not")
+    parser.add_argument('--grad_clip', type=ast.literal_eval, default=True, help="whether gradient clip to 1 or not")
 
     parser.add_argument("--img_size", default=224, type=int, help="Final train resolution")
     parser.add_argument("--batch_size", default=32, type=int,  help="Local batch size for training.")

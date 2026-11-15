@@ -46,7 +46,7 @@ class DatasetFLViT(data.Dataset):
         self.data_all = data_all[args.split_type]
 
         if self.phase == 'train':
-            if args.dataset == 'cifar10' or args.dataset == "pacs" :
+            if args.dataset == 'cifar10' or args.dataset == "pacs" or args.dataset == 'domainnet':
                 self.data = self.data_all['data'][args.single_client]
                 self.labels = self.data_all['target'][args.single_client]
 
@@ -59,7 +59,7 @@ class DatasetFLViT(data.Dataset):
                 self.labels = data_all['labels']
         
         else:
-            if args.dataset == 'cifar10' or args.dataset == "pacs":
+            if args.dataset == 'cifar10' or args.dataset == "pacs" or args.dataset == 'domainnet':
                 self.data = data_all['union_' + phase]['data']
                 self.labels = data_all['union_' + phase]['target']
 
@@ -96,7 +96,7 @@ class DatasetFLViT(data.Dataset):
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
-        if self.args.dataset == 'cifar10' or self.args.dataset == "pacs":
+        if self.args.dataset == 'cifar10' or self.args.dataset == "pacs" or self.args.dataset == 'domainnet':
             img, target = self.data[index], self.labels[index]
             img = Image.fromarray(img)
 
@@ -137,7 +137,7 @@ def create_dataset_and_evalmetrix(args):
     if args.split_type == 'central':
         args.dis_cvs_files = ['central']
 
-    if args.dataset == 'cifar10' or args.dataset == "pacs" :
+    if args.dataset == 'cifar10' or args.dataset == "pacs" or args.dataset == 'domainnet':
 
         # get the client with number
         print('Loading dataset and npy file')

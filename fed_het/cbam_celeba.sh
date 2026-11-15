@@ -1,0 +1,3 @@
+python train_FedAVG.py --FL_platform CBAM-FedAVG --dataset celeba --local_epochs 1 --max_communication_rounds 30 --num_local_clients 10 --split_type real --seed 999 --n 1 --grad_clip False
+python train_FedAVG.py --FL_platform CBAM-FedAVG --dataset celeba --local_epochs 1 --max_communication_rounds 30 --num_local_clients 10 --split_type real --seed 666 --n 1 --grad_clip False
+python train_FedAVG.py --FL_platform CBAM-FedAVG --dataset celeba --local_epochs 1 --max_communication_rounds 30 --num_local_clients 10 --split_type real --seed 333 --n 1 --grad_clip False

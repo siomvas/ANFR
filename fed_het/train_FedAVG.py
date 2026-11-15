@@ -8,7 +8,7 @@ from copy import deepcopy
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from utils.data_utils import DatasetFLViT, create_dataset_and_evalmetrix
-from utils.util import Partial_Client_Selection, valid, average_model, optimizer_to
+from utils.util import Partial_Client_Selection, valid, valid_alt, average_model, optimizer_to
 from utils.start_config import initization_configure
 from typing import List, Tuple, Union, OrderedDict
 import pandas as pd
@@ -126,7 +126,10 @@ def train(args, model):
             args.single_client = cur_single_client
             model = model_all[proxy_single_client]
             model.to(args.device)
-            valid(args, model, val_loader_proxy_clients[proxy_single_client], test_loader, TestFlag=True)
+            if args.valid_type == 'orig':
+                valid(args, model, val_loader_proxy_clients[proxy_single_client], test_loader, TestFlag=True)
+            elif args.valid_type == 'alt':
+                valid_alt(args, model, val_loader_proxy_clients[proxy_single_client], test_loader, TestFlag=True)
             model.cpu()
 
         args.record_val_acc = pd.concat([args.record_val_acc, pd.DataFrame([args.current_acc])], ignore_index=True)
@@ -159,7 +162,8 @@ def main():
     # General DL parameters
     parser.add_argument("--FL_platform", type = str, default="ResNet-FedAVG",  help="Choose of different FL platform. ")
     parser.add_argument("--norm", type = str, default=None,  help="Selects a normalization layer for the model. Options: BN, LN, GN")
-    parser.add_argument("--dataset", choices=["cifar10", "celeba", "pacs", "gldk23", "isic19"], default="celeba", help="Which dataset.")
+    parser.add_argument("--valid_type", choices=["orig", "alt"], default="orig", help="Selects whether test accuracy is recorded when the validation accuracy has increased (orig) or always (alt).")    
+    parser.add_argument("--dataset", choices=["cifar10", "celeba", "pacs", "gldk23", "isic19", "domainnet"], default="celeba", help="Which dataset.")
     parser.add_argument("--data_path", type=str, default='./data/', help="Where is dataset located.")
 
     parser.add_argument("--save_model_flag",  action='store_true', default=False,  help="Save the best model for each client.")
