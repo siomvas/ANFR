@@ -20,22 +20,6 @@ NUM_CLASSES = 8
 # VGG
 
 
-def vgg_11(seed):
-    seed_everything(seed)
-    bb = tm.vgg11()
-    num_ftrs = bb.classifier[6].in_features
-    bb.classifier[6] = nn.Linear(num_ftrs, NUM_CLASSES)
-    return bb
-
-
-def vgg_11_pretrained_pt(seed):
-    seed_everything(seed)
-    bb = tm.vgg11_bn(weights="IMAGENET1K_V1")
-    num_ftrs = bb.classifier[6].in_features
-    bb.classifier[6] = nn.Linear(num_ftrs, NUM_CLASSES)
-    return bb
-
-
 # RESNET
 
 
@@ -53,21 +37,6 @@ def resnet_18_supervised(seed):
     return bb
 
 
-def resnet_18_ssl(seed):
-    seed_everything(seed)
-    model = tm.resnet18()
-    model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
-    model.load_state_dict(torch.load(os.path.join(ssl_model_dir, "resnet_18.pth")))
-
-    return model
-
-
-def resnet_18_pretrained_timm(seed):
-    seed_everything(seed)
-    bb = timm.create_model("resnet18.a1_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return bb
-
-
 def resnet_50(seed):
     seed_everything(seed)
     bb = tm.resnet50()
@@ -79,26 +48,6 @@ def resnet_50(seed):
 resnet_50_scratch = resnet_50
 
 
-def resnet_50_pretrained_pt(seed):
-    seed_everything(seed)
-    bb = tm.resnet50(weights="IMAGENET1K_V2")
-    num_ftrs = bb.fc.in_features
-    bb.fc = nn.Linear(num_ftrs, NUM_CLASSES)
-    return bb
-
-
-def resnet_50_pretrained_ssl(seed):
-    seed_everything(seed)
-    model = tm.resnet50()
-    model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
-    model.load_state_dict(torch.load(os.path.join(ssl_model_dir, "resnet_50.pth")))
-
-    return model
-
-
-resnet_50_ssl = resnet_50_pretrained_ssl
-
-
 def resnet_50_pretrained_timm(seed):
     seed_everything(seed)
     bb = timm.create_model("resnet50.ra_in1k", pretrained=True, num_classes=NUM_CLASSES)
@@ -107,32 +56,6 @@ def resnet_50_pretrained_timm(seed):
 
 resnet_50_supervised = resnet_50_pretrained_timm
 resnet_50_pretrained = resnet_50_pretrained_timm
-
-
-def resnet_50_pretrained_dino(seed):
-    seed_everything(seed)
-    model = torch.hub.load("facebookresearch/dino:main", "dino_resnet50", pretrained=True)
-    model.fc = nn.Linear(2048, NUM_CLASSES)
-    return model
-
-
-def resnet_50_pretrained_mocov3(seed):
-    seed_everything(seed)
-    model = tm.resnet50()
-    checkpoint = torch.load(f"{model_dir}/r-50-1000ep.pth.tar", map_location="cpu")
-    state_dict = checkpoint["state_dict"]
-
-    for k in list(state_dict.keys()):
-        # retain only base_encoder up to before the embedding layer
-        if k.startswith("module.base_encoder") and not k.startswith("module.base_encoder.%s" % "fc"):
-            # remove prefix
-            state_dict[k[len("module.base_encoder.") :]] = state_dict[k]
-        # delete renamed or unused k
-        del state_dict[k]
-
-    model.load_state_dict(state_dict, strict=False)
-    model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
-    return model
 
 
 # DENSENETS
@@ -160,34 +83,6 @@ def densenet_121_pretrained_pt(seed):
 densenet_121_supervised = densenet_121_pretrained_pt
 
 
-def densenet_121_pretrained_ssl(seed):
-    seed_everything(seed)
-    model = tm.densenet121()
-    model.classifier = nn.Linear(model.classifier.in_features, NUM_CLASSES)
-    model.load_state_dict(torch.load(os.path.join(ssl_model_dir, "densenet_121.pth")))
-
-    return model
-
-
-densenet_121_ssl = densenet_121_pretrained_ssl
-
-
-def densenet_169(seed):
-    seed_everything(seed)
-    bb = tm.densenet169()
-    num_ftrs = bb.classifier.in_features
-    bb.classifier = nn.Linear(num_ftrs, NUM_CLASSES)
-    return bb
-
-
-def densenet_169_pretrained_pt(seed):
-    seed_everything(seed)
-    bb = tm.densenet169(weights="IMAGENET1K_V1")
-    num_ftrs = bb.classifier.in_features
-    bb.classifier = nn.Linear(num_ftrs, NUM_CLASSES)
-    return bb
-
-
 # CONVNEXT
 
 
@@ -213,60 +108,15 @@ def convnext_small_pretrained_pt(seed):
 convnext_small_supervised = convnext_small_pretrained_pt
 
 
-def convnext_tiny_pretrained_timm(seed):
-    seed_everything(seed)
-    bb = timm.create_model("convnext_tiny.fb_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return bb
-
-
 def convnext_small_pretrained_timm(seed):
     seed_everything(seed)
     bb = timm.create_model("convnext_small.fb_in1k", pretrained=True, num_classes=NUM_CLASSES)
     return bb
 
 
-def convnext_small_pretrained_ssl(seed):
-    seed_everything(seed)
-    model = tm.convnext_small()
-    model.classifier[2] = nn.Linear(model.classifier[2].in_features, NUM_CLASSES)
-    model.load_state_dict(torch.load(os.path.join(ssl_model_dir, "convnext_small.pth")))
-
-    return model
-
-
-convnext_small_ssl = convnext_small_pretrained_ssl
-
 # EFFICIENTNETv2 (better than ViT)
 
 from efficientnet_pytorch import EfficientNet
-
-
-class MyEfficientNet(nn.Module):
-    def __init__(self, pretrained=True, arch_name="efficientnet-b0", num_classes=8):
-        super(MyEfficientNet, self).__init__()
-        self.pretrained = pretrained
-        self.base_model = EfficientNet.from_pretrained(arch_name) if pretrained else EfficientNet.from_name(arch_name)
-        nftrs = self.base_model._fc.in_features
-        self.base_model._fc = nn.Linear(nftrs, num_classes)
-
-    def forward(self, image, feature_out=False):
-        # Convolution layers
-        x = self.base_model.extract_features(image)
-        # Pooling and final linear layer
-        feature_x = self.base_model._avg_pooling(x)
-        if self.base_model._global_params.include_top:
-            x = feature_x.flatten(start_dim=1)
-            x = self.base_model._dropout(x)
-            x = self.base_model._fc(x)
-        if feature_out:
-            return x, feature_x.flatten(start_dim=1)
-        return x
-
-
-def MyEfficientNet_supervised(seed):
-    seed_everything(seed)
-    model = MyEfficientNet(pretrained=True, arch_name="efficientnet-b0", num_classes=NUM_CLASSES)
-    return model
 
 
 def efficientnet_v2_s(seed):
@@ -280,30 +130,11 @@ def efficientnet_v2_s(seed):
 efficientnet_v2_s_scratch = efficientnet_v2_s
 
 
-def efficientnet_v2_s_pretrained_pt(seed):
-    seed_everything(seed)
-    bb = tm.efficientnet_v2_s(weights="IMAGENET1K_V1")
-    num_ftrs = bb.classifier[1].in_features
-    bb.classifier[1] = nn.Linear(num_ftrs, NUM_CLASSES)
-    return bb
-
-
 def efficientnet_v2_s_supervised(seed):
     seed_everything(seed)
     bb = timm.create_model("tf_efficientnetv2_s.in1k", pretrained=True, num_classes=NUM_CLASSES)
     return bb
 
-
-def efficientnet_v2_s_pretrained_ssl(seed):
-    seed_everything(seed)
-    model = tm.efficientnet_v2_s()
-    model.classifier[1] = nn.Linear(model.classifier[1].in_features, NUM_CLASSES)
-    model.load_state_dict(torch.load(os.path.join(ssl_model_dir, "efficientnet_v2_s_214.pth")))
-
-    return model
-
-
-efficientnet_v2_s_ssl = efficientnet_v2_s_pretrained_ssl
 
 # WIDE RESNET
 
@@ -330,34 +161,7 @@ def wide_resnet_50_2_pretrained_pt(seed):
 wide_resnet_50_2_supervised = wide_resnet_50_2_pretrained_pt
 
 
-def wide_resnet_50_2_pretrained_ssl(seed):
-    seed_everything(seed)
-    model = tm.wide_resnet50_2()
-    model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
-    model.load_state_dict(torch.load(os.path.join(ssl_model_dir, "wide_resnet_50_2.pth")))
-
-    return model
-
-
-wide_resnet_50_2_ssl = wide_resnet_50_2_pretrained_ssl
-
 # RESNEXT
-
-
-def resnext50_32x4d(seed):
-    seed_everything(seed)
-    bb = tm.resnext50_32x4d()
-    num_ftrs = bb.fc.in_features
-    bb.fc = nn.Linear(num_ftrs, NUM_CLASSES)
-    return bb
-
-
-def resnext_50_32x4d_pretrained_pt(seed):
-    seed_everything(seed)
-    bb = tm.resnext50_32x4d(weights="IMAGENET1K_V2")
-    num_ftrs = bb.fc.in_features
-    bb.fc = nn.Linear(num_ftrs, NUM_CLASSES)
-    return bb
 
 
 # NORM FREE RESNET
@@ -380,16 +184,6 @@ def nf_resnet50_pretrained(seed):
 
 nf_resnet50_supervised = nf_resnet50_pretrained
 
-
-def nf_resnet50_pretrained_ssl(seed):
-    seed_everything(seed)
-    model = timm.create_model("nf_resnet50.ra2_in1k", pretrained=False, num_classes=NUM_CLASSES)
-    model.load_state_dict(torch.load(os.path.join(ssl_model_dir, "nf_resnet50.pth")))
-
-    return model
-
-
-nf_resnet50_ssl = nf_resnet50_pretrained_ssl
 
 # SWIN
 
@@ -415,23 +209,6 @@ def swin_t_pretrained_pt(seed):
 
 swin_t_supervised = swin_t_pretrained_pt
 
-
-def swin_t_pretrained_timm(seed):
-    seed_everything(seed)
-    bb = timm.create_model("swin_tiny_patch4_window7_224.ms_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return bb
-
-
-def swin_t_pretrained_ssl(seed):
-    seed_everything(seed)
-    model = tm.swin_t()
-    model.head = nn.Linear(model.head.in_features, NUM_CLASSES)
-    model.load_state_dict(torch.load(os.path.join(ssl_model_dir, "swin_t.pth")))
-
-    return model
-
-
-swin_t_ssl = swin_t_pretrained_ssl
 
 # VIT
 
@@ -466,85 +243,10 @@ def vit_b_16_pretrained_ssl(seed):
     return model
 
 
-vit_b_16_ssl = vit_b_16_pretrained_ssl
-
-
-def vit_b_16_pretrained_dino(seed):
-    seed_everything(seed)
-    model = torch.hub.load("facebookresearch/dino:main", "dino_vitb16", pretrained=True)
-    model.head = nn.Linear(model.embed_dim, NUM_CLASSES)
-    return model
-
-
 # MoCoV3
 
 
-class VisionTransformerMoCo(VisionTransformer):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Use fixed 2D sin-cos position embedding
-        self.build_2d_sincos_position_embedding()
-
-    def build_2d_sincos_position_embedding(self, temperature=10000.0):
-        h, w = self.patch_embed.grid_size
-        grid_w = torch.arange(w, dtype=torch.float32)
-        grid_h = torch.arange(h, dtype=torch.float32)
-        grid_w, grid_h = torch.meshgrid(grid_w, grid_h)
-        assert self.embed_dim % 4 == 0, "Embed dimension must be divisible by 4 for 2D sin-cos position embedding"
-        pos_dim = self.embed_dim // 4
-        omega = torch.arange(pos_dim, dtype=torch.float32) / pos_dim
-        omega = 1.0 / (temperature**omega)
-        out_w = torch.einsum("m,d->md", [grid_w.flatten(), omega])
-        out_h = torch.einsum("m,d->md", [grid_h.flatten(), omega])
-        pos_emb = torch.cat([torch.sin(out_w), torch.cos(out_w), torch.sin(out_h), torch.cos(out_h)], dim=1)[None, :, :]
-
-        pe_token = torch.zeros([1, 1, self.embed_dim], dtype=torch.float32)
-        self.pos_embed = nn.Parameter(torch.cat([pe_token, pos_emb], dim=1))
-        self.pos_embed.requires_grad = False
-
-
-def vit_b_16_pretrained_mocov3(seed):
-    seed_everything(seed)
-    model = VisionTransformerMoCo(
-        patch_size=16,
-        embed_dim=768,
-        depth=12,
-        num_heads=12,
-        mlp_ratio=4,
-        qkv_bias=True,
-        norm_layer=partial(nn.LayerNorm, eps=1e-6),
-    )
-    model.default_cfg = _cfg()
-    checkpoint = torch.load(f"{model_dir}/vit-b-300ep.pth.tar", map_location="cpu")
-    state_dict = checkpoint["state_dict"]
-
-    for k in list(state_dict.keys()):
-        # retain only base_encoder up to before the embedding layer
-        if k.startswith("module.base_encoder") and not k.startswith("module.base_encoder.%s" % "head"):
-            # remove prefix
-            state_dict[k[len("module.base_encoder.") :]] = state_dict[k]
-        # delete renamed or unused k
-        del state_dict[k]
-
-    model.load_state_dict(state_dict, strict=False)
-
-    model.head = nn.Linear(model.embed_dim, NUM_CLASSES)
-    return model
-
-
 # ConvMixer
-
-
-def convmixer(seed):
-    seed_everything(seed)
-    model = timm.create_model("convmixer_768_32.in1k", pretrained=False, num_classes=NUM_CLASSES)
-    return model
-
-
-def convmixer_pretrained(seed):
-    seed_everything(seed)
-    model = timm.create_model("convmixer_768_32.in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return model
 
 
 def nfnet_f0(seed):
@@ -574,117 +276,11 @@ def eca_nfnet_l0(seed):
 eca_nfnet_l0_supervised = eca_nfnet_l0
 
 
-def eca_nfnet_l1(seed):
-    # Image size: train = 256 x 256, test = 320 x 320
-    model = timm.create_model("eca_nfnet_l1.ra2_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return model
-
-
-eca_nfnet_l1_supervised = eca_nfnet_l1
-
-
-def eca_nfnet_l2(seed):
-    # Image size: train = 320 x 320, test = 384 x 384
-    model = timm.create_model("eca_nfnet_l2.ra3_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return model
-
-
-eca_nfnet_l2_supervised = eca_nfnet_l2
-
-
-def silu_to_gelu(model):
-    for name, child in model.named_children():
-        if isinstance(child, nn.SiLU):
-            setattr(model, name, nn.GELU())
-
-        else:
-            silu_to_gelu(child)
-
-
-def gelu_eca_nfnet_l0(seed):  # 24M parameters 4.4 GMACs
-    model = timm.create_model("eca_nfnet_l0.ra2_in1k", pretrained=True, num_classes=NUM_CLASSES)
-
-    silu_to_gelu(model)
-
-    return model
-
-
-gelu_eca_nfnet_l0_supervised = gelu_eca_nfnet_l0
-
-
-def gelu_eca_nfnet_l1(seed):  # 24M parameters 4.4 GMACs
-    model = timm.create_model("eca_nfnet_l1.ra2_in1k", pretrained=True, num_classes=NUM_CLASSES)
-
-    silu_to_gelu(model)
-
-    return model
-
-
-gelu_eca_nfnet_l1_supervised = gelu_eca_nfnet_l1
-
-
-def gelu_eca_nfnet_l2(seed):  # 24M parameters 4.4 GMACs
-    model = timm.create_model("eca_nfnet_l2.ra3_in1k", pretrained=True, num_classes=NUM_CLASSES)
-
-    silu_to_gelu(model)
-
-    return model
-
-
-gelu_eca_nfnet_l2_supervised = gelu_eca_nfnet_l2
-
-
-def gelu_nfnet_l0(seed):  # 24M parameters 4.4 GMACs
-    model = timm.create_model("nfnet_l0.ra2_in1k", pretrained=True, num_classes=NUM_CLASSES)
-
-    silu_to_gelu(model)
-
-    return model
-
-
-gelu_nfnet_l0_supervised = gelu_nfnet_l0
-
-
 # Credit to Sara Pieri for the following
-
-
-def coatnet_ln(seed):
-    seed_everything(seed)
-    model = timm.create_model("coatnet_0_rw_224.sw_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    coatnet_to_layer_norm(model)
-
-    return model
-
-
-coatnet_ln_supervised = coatnet_ln
-
-
-def coatnet_to_layer_norm(module: torch.nn.Module):
-
-    for name, child in module.named_children():
-        if isinstance(child, BatchNormAct2d):
-            num_channels = child.num_features
-            setattr(module, name, LayerNormAct2d(num_channels, eps=1e-5, act_layer=nn.SiLU))
-
-        elif isinstance(child, nn.BatchNorm2d):
-            child: nn.BatchNorm2d = child
-            num_channels = child.num_features
-            setattr(module, name, LayerNorm2d(num_channels))
-
-        else:
-            coatnet_to_layer_norm(child)
 
 
 # CoAtNeXt - A timm specific arch that uses ConvNeXt blocks in place of MBConv blocks in CoAtNet.
 # All normalization layers are LayerNorm (no BatchNorm).
-
-
-def coatnetx_nano(seed):  # 14.7M Parameters 2.5 GMACs
-    model = timm.create_model("coatnext_nano_rw_224.sw_in1k", pretrained=True, num_classes=11)
-    return model
-
-
-coatnetx_nano_supervised = coatnetx_nano
 
 
 def caformer_supervised(seed):
@@ -693,116 +289,9 @@ def caformer_supervised(seed):
     return model
 
 
-class StarReLU(nn.Module):
-    """
-    StarReLU: s * relu(x) ** 2 + b
-    """
-
-    def __init__(
-        self, scale_value=1.0, bias_value=0.0, scale_learnable=True, bias_learnable=True, mode=None, inplace=False
-    ):
-        super().__init__()
-        self.inplace = inplace
-        self.relu = nn.ReLU(inplace=inplace)
-        self.scale = nn.Parameter(scale_value * torch.ones(1), requires_grad=scale_learnable)
-        self.bias = nn.Parameter(bias_value * torch.ones(1), requires_grad=bias_learnable)
-
-    def forward(self, x):
-        return self.scale * self.relu(x) ** 2 + self.bias
-
-
-def silu_to_starrelu(model):
-    for name, child in model.named_children():
-        if isinstance(child, nn.SiLU):
-            setattr(model, name, StarReLU())
-
-        else:
-            silu_to_gelu(child)
-
-
-def starrelu_nfnet_l0(seed):  # 24M parameters 4.4 GMACs
-    seed_everything(seed)
-    model = timm.create_model("nfnet_l0.ra2_in1k", pretrained=True, num_classes=NUM_CLASSES)
-
-    silu_to_starrelu(model)
-
-    return model
-
-
-starrelu_nfnet_l0_supervised = starrelu_nfnet_l0
-
-
-def starrelu_eca_nfnet_l0(seed):  # 24M parameters 4.4 GMACs
-    seed_everything(seed)
-    model = timm.create_model("eca_nfnet_l0.ra2_in1k", pretrained=True, num_classes=NUM_CLASSES)
-
-    silu_to_starrelu(model)
-
-    return model
-
-
-starrelu_eca_nfnet_l0_supervised = starrelu_eca_nfnet_l0
-
-
-def starrelu_eca_nfnet_l1(seed):  # 24M parameters 4.4 GMACs
-    seed_everything(seed)
-    model = timm.create_model("eca_nfnet_l1.ra2_in1k", pretrained=True, num_classes=NUM_CLASSES)
-
-    silu_to_starrelu(model)
-
-    return model
-
-
-starrelu_eca_nfnet_l1_supervised = starrelu_eca_nfnet_l1
-
-
-def starrelu_eca_nfnet_l2(seed):  # 24M parameters 4.4 GMACs
-    seed_everything(seed)
-    model = timm.create_model("eca_nfnet_l2.ra3_in1k", pretrained=True, num_classes=NUM_CLASSES)
-
-    silu_to_starrelu(model)
-
-    return model
-
-
-starrelu_eca_nfnet_l2_supervised = starrelu_eca_nfnet_l2
-
-
-def dm_nfnet_f0_supervised(seed):
-    seed_everything(seed)
-    model = timm.create_model("dm_nfnet_f0.dm_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return model
-
-
-def dm_nfnet_f1_supervised(seed):
-    seed_everything(seed)
-    model = timm.create_model("dm_nfnet_f1.dm_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return model
-
-
 def nf_regnet_b1_supervised(seed):
     seed_everything(seed)
     model = timm.create_model("nf_regnet_b1.ra2_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return model
-
-
-def caformer_s36_supervised(seed):
-    seed_everything(seed)
-    model = timm.create_model("caformer_s36.sail_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return model
-
-
-def convnext_v2_tiny_supervised(seed):
-    # Image size: train = 224 x 224, test = 288 x 288
-    seed_everything(seed)
-    model = timm.create_model("convnextv2_tiny.fcmae_ft_in1k", pretrained=True, num_classes=NUM_CLASSES)
-    return model
-
-
-def caformer_m36_supervised(seed):
-    # Image size: 224 x 224, uses IN22k
-    seed_everything(seed)
-    model = timm.create_model("caformer_m36.sail_in22k_ft_in1k", pretrained=True, num_classes=NUM_CLASSES)
     return model
 
 
@@ -817,13 +306,6 @@ def seresnet_50(seed):
     # Image size: train = 224 x 224, test = 288 x 288
     seed_everything(seed)
     model = timm.create_model("seresnet50.ra2_in1k", pretrained=False, num_classes=NUM_CLASSES)
-    return model
-
-
-def deit_3_base_supervised(seed):
-    # Image size: 224 x 224,
-    seed_everything(seed)
-    model = timm.create_model("deit3_base_patch16_224.fb_in1k", pretrained=True, num_classes=NUM_CLASSES)
     return model
 
 
@@ -1138,11 +620,6 @@ class FixupResNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x + self.bias2)
         return x
-
-
-def fixup_resnet50(seed):
-    model = FixupResNet(FixupBottleneck, [3, 4, 6, 3], num_classes=NUM_CLASSES)
-    return model
 
 
 def fixup_seresnet50(seed):
