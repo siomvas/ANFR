@@ -2,9 +2,19 @@
 
 Code and pre-trained models for **An Architecture Built for Federated Learning: Addressing Data Heterogeneity through Adaptive Normalization-Free Feature Recalibration** (TMLR, 2025).
 
-[Paper (OpenReview)](https://openreview.net/forum?id=GtdYFLsblb) | [arXiv](https://arxiv.org/abs/2410.02006) | [Models on Hugging Face](https://huggingface.co/adcw447)
+[![Paper](https://img.shields.io/badge/TMLR-2025-blue)](https://openreview.net/forum?id=GtdYFLsblb)
+[![arXiv](https://img.shields.io/badge/arXiv-2410.02006-b31b1b.svg)](https://arxiv.org/abs/2410.02006)
+[![Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-models-ffcc4d)](https://huggingface.co/adcw447)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 Adaptive Normalization-free Feature Recalibration (ANFR) addresses data heterogeneity in the backbone model. It replaces activation normalization with weight standardization and adds channel attention to every block, so that the statistics the attention sees are consistent across clients. ANFR works with any aggregation method, in global and personalized federated learning, and under differential privacy.
+
+## Highlights
+
+- ANFR is the best or joint best model in 11 of the 12 combinations of dataset and aggregation method in the global federated learning comparison.
+- On Fed-ISIC2019 it improves on a batch-normalized ResNet-50 by 7.1 to 11.1 points of balanced accuracy, depending on the aggregation method.
+- On FedPathology with sample-level differential privacy at a budget of ε = 1, it loses 3.4 points of accuracy where the group-normalized baseline loses 17.5.
+- Three attention modules are supported (SE, ECA and CBAM), each with ImageNet-1k weights on the Hugging Face Hub.
 
 ## Pre-trained models
 
@@ -66,7 +76,7 @@ Copy `.env.example` to `.env` and set the folders.
 | Variable | What it points to |
 |---|---|
 | `FEDISIC_ROOT` | Fed-ISIC2019, preprocessed as in [FLamby](https://github.com/owkin/FLamby) |
-| `CHEST_ROOT` | FedChest: the images and the `datalists` folder. See [siomvas/FedChest](https://github.com/siomvas/FedChest) |
+| `CHEST_ROOT` | FedChest: the images and the `datalists` folder, as built by `fl_bench/chest/src/chest_preparation.py` |
 | `COLON_ROOT` | FedPathology: `nct_wsi_100k_no_norm.npz`, packed from NCT-CRC-HE-100K-NONORM and CRC-VAL-HE-7K (Kather et al.) by `fl_bench/colon/src/build_arrays.py` |
 | `ANFR_WEIGHTS_DIR` | Optional. A folder with the ANFR checkpoints, used in place of the Hugging Face Hub |
 | `FEDCONV_WEIGHTS_DIR` | Optional. FedConv checkpoints, for that baseline only |
