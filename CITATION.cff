@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the paper."
+title: "ANFR"
+authors:
+  - family-names: "Siomos"
+    given-names: "Vasilis"
+  - family-names: "Passerat-Palmbach"
+    given-names: "Jonathan"
+  - family-names: "Tarroni"
+    given-names: "Giacomo"
+repository-code: "https://github.com/siomvas/ANFR"
+license: MIT
+preferred-citation:
+  title: "An Architecture Built for Federated Learning: Addressing Data Heterogeneity through Adaptive Normalization-Free Feature Recalibration"
+  authors:
+    - family-names: "Siomos"
+      given-names: "Vasilis"
+    - family-names: "Passerat-Palmbach"
+      given-names: "Jonathan"
+    - family-names: "Tarroni"
+      given-names: "Giacomo"
+  type: article
+  journal: "Transactions on Machine Learning Research"
+  year: 2025
+  url: "https://openreview.net/forum?id=GtdYFLsblb"
