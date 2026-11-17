@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en" data-type="software" data-radius="soft" data-ground="sand" data-buttons="tonal" data-motion>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ANFR: an architecture for federated learning, with ImageNet weights</title>
+<meta name="description" content="A ResNet-50 built for federated learning: weight standardization and channel attention in every block, best or joint best in 11 of 12 federated settings and 3.4 points down under differential privacy. TMLR 2025, code and ImageNet weights.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ANFR: an architecture built for federated learning">
+<meta property="og:description" content="Weight standardization and channel attention in every block. TMLR 2025, with ImageNet weights on Hugging Face.">
+<meta property="og:image" content="https://siomvas.github.io/ANFR/share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1c1c1c">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://siomvas.github.io/ANFR/">
+<meta name="citation_title" content="An Architecture Built for Federated Learning: Addressing Data Heterogeneity through Adaptive Normalization-Free Feature Recalibration">
+<meta name="citation_author" content="Siomos, Vasilis">
+<meta name="citation_author" content="Passerat-Palmbach, Jonathan">
+<meta name="citation_author" content="Tarroni, Giacomo">
+<meta name="citation_publication_date" content="2025">
+<meta name="citation_journal_title" content="Transactions on Machine Learning Research">
+<meta name="citation_pdf_url" content="https://openreview.net/pdf?id=GtdYFLsblb">
+<meta name="citation_arxiv_id" content="2410.02006">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"ScholarlyArticle","headline":"An Architecture Built for Federated Learning: Addressing Data Heterogeneity through Adaptive Normalization-Free Feature Recalibration","author":[{"@type":"Person","name":"Vasilis Siomos","url":"https://vsiomos.me"},{"@type":"Person","name":"Jonathan Passerat-Palmbach"},{"@type":"Person","name":"Giacomo Tarroni"}],"datePublished":"2025","isPartOf":"Transactions on Machine Learning Research","sameAs":["https://arxiv.org/abs/2410.02006","https://openreview.net/forum?id=GtdYFLsblb"],"codeRepository":"https://github.com/siomvas/ANFR"}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400..500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/system.css">
+<link rel="stylesheet" href="assets/ui/cards.css">
+<link rel="stylesheet" href="assets/motion/motion.css">
+<link rel="stylesheet" href="assets/backgrounds/backgrounds.css">
+<link rel="stylesheet" href="assets/layout/layout.css">
+<link rel="stylesheet" href="assets/icons/icon.css">
+<style>
+:root {
+  --p-bg: #1c1c1c; --p-surface: #262626; --p-ink: #f1f1ef; --p-muted: #9a9b96;
+  --p-accent: #8fa68e; --p-accent-ink: #1c1c1c; --p-action: #8fa68e; --p-action-ink: #1c1c1c;
+  --p-inv-bg: #c8c5ba; --p-inv-surface: #bab8ae; --p-inv-ink: #1c1c1c; --p-inv-muted: #454442;
+  --p-inv-accent: #1c1c1c; --p-inv-accent-ink: #c8c5ba; --p-inv-action: #1c1c1c; --p-inv-action-ink: #c8c5ba;
+  --font-display: "Geist", system-ui, sans-serif;
+  --font-text: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.035em;
+  --display-tracking-xl: -0.045em;
+}
+</style>
+<link rel="stylesheet" href="assets/ui/base.css">
+<link rel="stylesheet" href="assets/ui/window/fragment.css">
+<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+<script src="assets/backgrounds/backgrounds.js"></script>
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="assets/moments/moments.js">
+<link rel="modulepreload" href="assets/moments/lib.js">
+<link rel="modulepreload" href="assets/moments/liquid-type/moment.js">
+<style>
+  /* the hero window: the SE checkpoint on the Hub */
+  .anfr-hub__body { display: grid; grid-template-columns: 188px minmax(0, 1fr); min-height: 568px; }
+  .anfr-hub__side { display: grid; align-content: start; gap: 2px; padding: 12px 10px; border-right: 1px solid var(--u-line); font: 400 13px/1 var(--font-mono); }
+  .anfr-hub__side span { display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; color: var(--u-text-2); }
+  .anfr-hub__side span.is-on { background: var(--u-fill-2); color: var(--u-ink); }
+  .anfr-hub__main { padding: 20px 24px var(--ly-cut-room, 48px) 24px; min-width: 0; }
+  .anfr-hub__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .anfr-hub__head b { font: 500 16px/1.3 var(--font-mono); color: var(--u-ink); margin-right: 6px; }
+  .anfr-hub__facts { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr); gap: 0; margin: 20px 0 0; border: 1px solid var(--u-line); border-radius: 10px; }
+  .anfr-hub__facts div { padding: 12px 14px; }
+  .anfr-hub__facts div + div { border-left: 1px solid var(--u-line); }
+  .anfr-hub__facts dt { font-size: 12px; color: var(--u-muted); }
+  .anfr-hub__facts dd { margin: 4px 0 0; font: 500 15px/1.3 var(--font-text); color: var(--u-ink); font-variant-numeric: tabular-nums; }
+  .anfr-hub__code { margin: 18px 0 0; padding: 14px 16px; border-radius: 10px; background: var(--u-fill); color: var(--u-ink); font: 400 12px/1.7 var(--font-mono); white-space: pre; overflow: hidden; }
+  .hero__art > .anfr-card { left: calc(var(--s-8) + var(--s-5)); bottom: var(--s-8); width: 300px; }
+  @media (max-width: 1023px) { .hero__art > .anfr-card { left: calc(var(--s-6) + var(--s-5)); } }
+  .hero__art .loop-pause:focus-visible { outline-color: #1c1c1c; }
+  .anfr-card .ui-panel { padding-bottom: 6px; }
+  .anfr-card__row { display: flex; justify-content: space-between; align-items: center; height: 40px; padding: 0 16px; border-top: 1px solid var(--u-line); font-size: 13px; color: var(--u-ink); font-variant-numeric: tabular-nums; }
+  .anfr-card__row span:last-child { font-family: var(--font-mono); font-size: 12.5px; }
+  .anfr-card__row.is-key span:first-child { font-weight: 500; }
+  @media (max-width: 639px) { .anfr-hub__body { grid-template-columns: minmax(0, 1fr); } .anfr-hub__side { display: none; } .anfr-hub__facts { grid-template-columns: minmax(0, 1fr); } .anfr-hub__facts div + div { border-left: 0; border-top: 1px solid var(--u-line); } }
+
+
+  /* the window and card sit on the lit sand ground: light UI with dark ink */
+  .hero__art .ui { --u-bg: #f4f0e8; --u-ink: #1c1c1c; --u-muted: #5b5850; --u-text-2: #3b3934; --u-line: rgba(28, 28, 28, .1); --u-line-2: rgba(28, 28, 28, .16); --u-fill: rgba(28, 28, 28, .045); --u-fill-2: rgba(28, 28, 28, .08); color: var(--u-ink); }
+  .hero__art .ui-chip { background: var(--u-fill-2); color: var(--u-text-2); }
+  .hero__art .ui-win__crumb, .hero__art .ui-win__crumb span, .hero__art .ui-meta { color: var(--u-text-2); }
+
+  /* app-frame (sections-library.md, app-frame) */
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
+  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  @media (min-width: 640px) and (max-width: 1023px) { .app.ui { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  @media (max-width: 639px) { .app.ui { grid-template-columns: minmax(0, 1fr); } .app > .app__pane--list { display: none; } .app > .app__pane + .app__pane { border-left: 0; } }
+  .t2-cols, .t2-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 64px 92px; align-items: center; gap: 0 12px; padding: 0 16px; }
+  .t2-cols { height: 34px; font-size: 12px; color: var(--u-muted); border-bottom: 1px solid var(--u-line); }
+  .t2-row { width: 100%; height: 36px; border: 0; background: transparent; color: var(--u-ink); font: 400 13px/16px var(--font-text); text-align: left; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .t2-rows li + li .t2-row { box-shadow: inset 0 1px 0 var(--u-line); }
+  .t2-row:hover { background: var(--u-fill); }
+  .t2-row[aria-pressed="true"] { background: var(--u-fill-2); }
+  .t2-row__v { font-variant-numeric: tabular-nums; text-align: right; }
+  .t2-chip { justify-self: start; height: 22px; padding: 0 8px; border-radius: 99px; display: inline-flex; align-items: center; font-size: 12px; background: var(--u-fill-2); color: var(--u-text-2); }
+  .t2-chip--best { background: var(--u-tint-2); color: var(--u-ink); }
+  .t2-open { padding: 6px 20px 20px; }
+  @media (max-width: 639px) { .app__pane--open .ui-head { flex-wrap: wrap; height: auto; min-height: 44px; padding-block: 10px; row-gap: 2px; } .app__pane--open .ui-head .ui-spacer { display: none; } .app__pane--open .ui-meta { flex-basis: 100%; white-space: normal; } }
+  .t2-open svg { width: 100%; height: auto; }
+  .t2-open text { font-family: var(--font-text); font-variant-numeric: tabular-nums; }
+
+  /* the privacy chart */
+  .dp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--s-5); }
+  .dp-switch { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 18px 0 6px; border: 1px solid var(--line-strong); border-radius: 99px; background: transparent; color: var(--ink); font: 500 15px/1 var(--font-text); cursor: pointer; touch-action: manipulation; }
+  .dp-switch__knob { position: relative; width: 44px; height: 28px; border-radius: 99px; background: var(--line-strong); transition: background-color .2s; }
+  .dp-switch__knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); transition: transform .25s var(--ease, ease); }
+  .dp-switch[aria-checked="true"] .dp-switch__knob { background: var(--accent); }
+  .dp-switch[aria-checked="true"] .dp-switch__knob::after { transform: translateX(16px); background: var(--accent-ink); }
+  .dp-chart { margin-top: var(--s-6); }
+  .dp-chart svg { display: block; max-width: 100%; height: auto; }
+  .dp-chart text { font-family: var(--font-text); font-variant-numeric: tabular-nums; }
+
+  /* the paper's figure on its own white plate */
+  .anfr-fig { margin: 0; background: #fff; border-radius: var(--r-lg); padding: var(--s-8); overflow-x: auto; overscroll-behavior-x: contain; }
+  .anfr-fig img { display: block; width: 100%; height: auto; }
+  .anfr-fig:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media (max-width: 767px) { .anfr-fig { padding: var(--s-4); } .anfr-fig img { width: 760px; max-width: none; } }
+
+
+  .anfr-statement { max-width: none; }
+  .anfr-statement p { max-width: 52ch; font-size: 20px; line-height: 1.5; color: color-mix(in oklab, var(--ink) 86%, var(--bg)); }
+  .stack-7 > * + * { margin-top: var(--s-7); }
+  .anfr-facts h3 { font: 500 20px/1.3 var(--font-display); letter-spacing: -0.01em; margin: 0 0 var(--s-3); }
+  .anfr-facts p { margin: 0; line-height: 1.55; }
+  @media (max-width: 767px) { .anfr-facts { row-gap: var(--s-6); } }
+  .anfr-menu-fig { background: #fff; }
+  .anfr-menu-fig img { width: 100%; height: 100%; object-fit: contain; padding: 10px; }
+  .hero__lead, main .grid p.muted { color: color-mix(in oklab, var(--ink) 86%, var(--bg)); }
+
+  /* the citation window */
+  .faq > .faq__item, .anfr-bib { min-width: 0; }
+  .anfr-bib pre { margin: 0; padding: 14px 18px 16px; font: 400 12.5px/1.6 var(--font-mono); color: var(--u-ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .anfr-copy { min-height: 32px; padding: 0 12px; border: 1px solid var(--u-line-2); border-radius: 8px; background: var(--u-bg); color: var(--u-ink); font: 500 13px/1 var(--font-text); cursor: pointer; touch-action: manipulation; }
+  @media (max-width: 639px) { .anfr-copy, .t2-row { min-height: 44px; } }
+  main [id]:not(section) { scroll-margin-top: calc(var(--nav) + 24px); }
+</style>
+</head>
+<body>
+<!-- type: software (site-kind software): an architecture for federated learning, its code and ImageNet weights
+     deal: hero collage, nav nav-mega, close close-type, footer footer-columns, rhythm surface-pairs, buttons tonal, mark stack,
+           palette charcoal-room-sage, type geist, ground sand, effect silk-folds (hero art), grounds bg-mist (hero), bg-band (method)
+     moments: liquid-type (#statement); the second dealt moment, letters-assemble, is a second statement and one is enough here
+     screens: hero 1, results 1, statement 1, privacy 1, method 1, questions 1, closing 1 -->
+<header class="nav nav--mega">
+  <div class="wrap nav__bar">
+    <a class="skip-link" href="#top">Skip to content</a>
+    <a class="nav__logo" href="#top"><span class="mark" data-mark="stack" aria-hidden="true"></span>ANFR</a>
+    <nav class="nav__links" aria-label="Main">
+      <div class="nav__item">
+        <a class="nav__link" href="#results">Results <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <div class="nav__menu">
+          <div class="wrap grid">
+            <div class="menu-col span-3">
+              <p class="t-label">Benchmarks</p>
+              <a href="#results">Global federated learning<span>Twelve settings, five backbones</span></a>
+              <a href="#privacy">Differential privacy<span>FedPathology at ε&nbsp;=&nbsp;1</span></a>
+            </div>
+            <div class="menu-col span-3">
+              <p class="t-label">Use it</p>
+              <a href="#weights">ImageNet weights<span>SE, ECA and CBAM on the Hub</span></a>
+              <a href="#cite">Citation<span>BibTeX for the paper</span></a>
+            </div>
+            <a class="menu-card span-4 start-9" href="#method"><div class="panel anfr-menu-fig"><img src="assets/img/anfr-figure-1.png" alt="" width="1429" height="312" loading="lazy"></div><span>How channel attention helps</span></a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="#privacy">Privacy</a></div>
+      <div class="nav__item"><a class="nav__link" href="#method">Method</a></div>
+      <div class="nav__item"><a class="nav__link" href="#questions">Questions</a></div>
+    </nav>
+    <div class="nav__actions">
+      <a class="nav__link" href="https://github.com/siomvas/ANFR">Code</a>
+      <a class="btn btn--primary" href="https://openreview.net/pdf?id=GtdYFLsblb">Read the paper</a>
+    </div>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero hero--collage bg-mist" data-enter aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text grid hero__grid">
+      <div class="hero__text span-5">
+        <h1 id="hero-h">An architecture built for federated learning</h1>
+        <p class="hero__lead">ANFR swaps batch statistics for weight standardization and channel attention, so a ResNet-50 holds up under client heterogeneity and differential privacy.</p>
+        <div class="btn-row"><a class="btn btn--primary" href="https://openreview.net/pdf?id=GtdYFLsblb">Read the paper</a><a class="btn btn--secondary" href="https://huggingface.co/adcw447">Get the weights</a></div>
+        <p class="hero__proof">TMLR 2025, with ImageNet weights that load in timm.</p>
+      </div>
+      <div class="hero__art span-6 start-7" data-fx="silk-folds" data-fx-seed="5" role="img" aria-label="The ANFR SE checkpoint on the Hugging Face Hub with its loading code, beside the private training result: ANFR drops from 84.47 to 81.11, GN-ResNet from 84.79 to 67.27">
+        <div class="ly-piece ly-piece--main" aria-hidden="true">
+          <div class="ui ui-panel">
+            <div class="ui-win__bar"><span class="ui-dots"><i></i><i></i><i></i></span><span class="ui-win__crumb" translate="no"><b>adcw447</b><i>/</i><span>nf_seresnet50.anfr_in1k</span></span></div>
+            <div class="anfr-hub__body">
+              <div class="anfr-hub__side" translate="no"><span class="is-on">nf_seresnet50</span><span>nf_ecaresnet50</span><span>nf_cbamresnet50</span></div>
+              <div class="anfr-hub__main">
+                <div class="anfr-hub__head"><b translate="no">nf_seresnet50.anfr_in1k</b><span class="ui-chip">timm</span><span class="ui-chip">Image classification</span></div>
+                <dl class="anfr-hub__facts"><div><dt>Attention</dt><dd>Squeeze-and-Excitation</dd></div><div><dt>Parameters</dt><dd>28.09 M</dd></div><div><dt>ImageNet-1k top-1</dt><dd>80.4</dd></div></dl>
+                <pre class="anfr-hub__code" translate="no">import timm
+model = timm.create_model(
+  "hf_hub:adcw447/nf_seresnet50.anfr_in1k",
+  pretrained=True,
+  num_classes=8,
+)</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ly-piece anfr-card" aria-hidden="true" data-ly-steps="700">
+          <div class="ui ui-panel">
+            <div class="ui-head"><span class="ui-title">Private training, ε&nbsp;=&nbsp;1</span><span class="ui-spacer"></span><span class="ui-meta">FedPathology</span></div>
+            <div class="anfr-card__row is-key" data-step><span>ANFR</span><span>84.47 → 81.11</span></div>
+            <div class="anfr-card__row" data-step><span>GN-ResNet</span><span>84.79 → 67.27</span></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="section" id="results" aria-labelledby="results-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 class="span-5" id="results-h">Results in global federated learning</h2>
+        <div class="span-6 start-7 stack-4">
+          <p class="muted">Five ResNet-50 backbones under four aggregation methods on three datasets, from Table 2. Pick a setting to compare them.</p>
+          <a class="link" href="https://openreview.net/pdf?id=GtdYFLsblb">See every table in the paper</a>
+        </div>
+      </div>
+      <p class="sr-only" id="anfr-status" role="status" aria-live="polite"></p>
+      <div class="ui app fill" role="group" aria-label="Results explorer">
+        <div class="app__pane app__pane--list">
+          <div class="ui-panel">
+            <div class="ui-win__bar"><span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="ui-win__crumb"><b>Table 2</b><i>/</i>global FL</span></div>
+            <div class="t2-cols" aria-hidden="true"><span>Dataset</span><span>Method</span><span style="text-align:right">ANFR</span><span>Rank</span></div>
+            <ul class="t2-rows" id="t2-rows" aria-label="Settings"></ul>
+          </div>
+        </div>
+        <div class="app__pane app__pane--open">
+          <div class="ui-panel">
+            <div class="ui-head"><span class="ui-title" id="t2-title">Fed-ISIC2019, FedAvg</span><span class="ui-spacer"></span><span class="ui-meta" id="t2-metric">balanced accuracy, mean ± std</span></div>
+            <div class="t2-open" id="t2-open"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section statement" id="statement" aria-labelledby="statement-h">
+    <div class="wrap">
+      <div data-moment="liquid-type" class="section-head anfr-statement">
+        <h2 id="statement-h" class="mo-lt__type">An architecture without batch statistics</h2>
+        <p>Weight standardization normalizes each layer’s weights instead of its activations, so the architecture never pools batch statistics that differ from one client to the next.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section ground-surface" id="privacy" aria-labelledby="privacy-h">
+    <div class="wrap">
+      <div class="dp-head">
+        <div class="section-head">
+          <h2 id="privacy-h">Federated learning with differential privacy, 3.4 points lost. <span class="muted">Group normalization loses 17.5 at the same budget.</span></h2>
+        </div>
+        <button class="dp-switch" type="button" role="switch" aria-checked="false" id="dp-switch"><span class="dp-switch__knob" aria-hidden="true"></span>Train with DP-SGD at ε&nbsp;=&nbsp;1</button>
+      </div>
+      <div class="dp-chart" id="dp-chart"></div>
+    </div>
+  </section>
+
+  <section class="section" id="method" aria-labelledby="method-h">
+    <div class="wrap stack-7">
+      <div class="grid grid--top">
+        <h2 class="span-5" id="method-h">Inside the architecture</h2>
+        <p class="span-6 start-7">Every block standardizes its weights, then a channel attention module rescales its feature maps. Attention learns to raise the channels that stay stable across clients and to damp the ones that shift.</p>
+      </div>
+      <div class="anfr-fig" role="region" tabindex="0" aria-label="Figure 1 of the paper">
+        <img src="assets/img/anfr-figure-1.png" alt="Two clients see the same classes under different color shifts. Channel attention boosts an edge channel that both share and suppresses a color channel that differs between them." width="1429" height="312" loading="lazy" decoding="async">
+      </div>
+      <div class="grid anfr-facts" id="weights">
+        <div class="span-4"><h3>Federated aggregation methods</h3><p>Works with FedAvg, FedProx, FedAdam and SCAFFOLD, and with FedPer for personalized learning.</p></div>
+        <div class="span-4"><h3>ImageNet weights for the architecture</h3><p>Checkpoints with SE, ECA and CBAM attention, at 80.4 to 80.61 top-1.</p></div>
+        <div class="span-4"><h3>Architecture overhead</h3><p>About 10% more time per training step than a batch-normalized ResNet, and less memory.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="questions" aria-labelledby="questions-h">
+    <div class="wrap">
+      <div class="grid grid--top">
+        <div class="span-5 section-head"><h2 id="questions-h">Questions about ANFR</h2></div>
+        <div class="faq span-6 start-7">
+          <div class="faq__item"><h3>Which aggregation methods does the architecture work with?</h3><p>Any. The paper tests FedAvg, FedProx, FedAdam and SCAFFOLD, and FedPer for personalized learning, where ANFR scores highest on both benchmarks.</p></div>
+          <div class="faq__item"><h3>Why does the architecture drop batch normalization?</h3><p>Batch normalization needs large batches and does not work with differential privacy. Group normalization, its usual stand-in, does not reliably beat it.</p></div>
+          <div class="faq__item"><h3>How do I load the weights in my code?</h3><p>Call <code translate="no">timm.create_model</code> with the Hub id and <code translate="no">pretrained=True</code>. For the CBAM variant, import <code translate="no">fl_bench/networks/anfr.py</code> first.</p></div>
+          <div class="faq__item" id="cite"><h3>How do I cite the research?</h3>
+            <div class="ui ui-panel anfr-bib">
+              <div class="ui-win__bar"><span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="ui-win__crumb" translate="no"><b>CITATION.bib</b></span><span class="ui-spacer"></span><button class="anfr-copy" type="button" data-copy="bibtex">Copy BibTeX</button></div>
+              <pre id="bibtex" translate="no">@article{siomos2025anfr,
+  title   = {An Architecture Built for Federated Learning:
+             Addressing Data Heterogeneity through Adaptive
+             Normalization-Free Feature Recalibration},
+  author  = {Siomos, Vasilis and Passerat-Palmbach, Jonathan
+             and Tarroni, Giacomo},
+  journal = {Transactions on Machine Learning Research},
+  year    = {2025},
+  url     = {https://openreview.net/forum?id=GtdYFLsblb}
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer closing" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--type">
+      <div class="section-head">
+        <h2 id="close-h">The full ANFR paper, open on OpenReview</h2>
+        <p>By Vasilis Siomos, Jonathan Passerat-Palmbach and Giacomo Tarroni, Transactions on Machine Learning Research, 2025.</p>
+      </div>
+      <a class="btn btn--primary btn--xl" href="https://openreview.net/pdf?id=GtdYFLsblb">Read the paper</a>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-4 stack-4">
+          <a class="nav__logo" href="#top"><span class="mark" data-mark="stack" aria-hidden="true"></span>ANFR</a>
+          <p class="footer__lede">City St George’s, University of London; Imperial College London.</p>
+        </div>
+        <div class="span-2 start-7 footer__col"><h3>Paper</h3><ul><li><a href="https://openreview.net/forum?id=GtdYFLsblb">OpenReview</a></li><li><a href="https://arxiv.org/abs/2410.02006">arXiv</a></li><li><a href="https://huggingface.co/papers/2410.02006">Hugging Face</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Code</h3><ul><li><a href="https://github.com/siomvas/ANFR">GitHub</a></li><li><a href="https://huggingface.co/adcw447">Weights</a></li><li><a href="https://doi.org/10.5281/zenodo.24312144">Zenodo archive</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Related</h3><ul><li><a href="https://siomvas.github.io/fds/">FDS</a></li><li><a href="https://siomvas.github.io/FedCLAM/">FedCLAM</a></li><li><a href="https://siomvas.github.io/ARIA/">ARIA</a></li></ul></div>
+      </div>
+      <div class="footer__legal">
+        <span>&copy; 2026 <a href="https://vsiomos.me">Vasilis Siomos</a></span>
+        <span>Product names and logos are trademarks of their owners</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="assets/system.js"></script>
+<script type="module" src="assets/motion/motion.js"></script>
+<script type="module" src="assets/layout/layout.js"></script>
+<script src="assets/page/anfr.js" defer></script>
+</body>
+</html>
