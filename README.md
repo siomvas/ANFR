@@ -5,6 +5,7 @@ Code and pre-trained models for **An Architecture Built for Federated Learning: 
 [![Paper](https://img.shields.io/badge/TMLR-2025-blue)](https://openreview.net/forum?id=GtdYFLsblb)
 [![arXiv](https://img.shields.io/badge/arXiv-2410.02006-b31b1b.svg)](https://arxiv.org/abs/2410.02006)
 [![Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-models-ffcc4d)](https://huggingface.co/adcw447)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24312144.svg)](https://doi.org/10.5281/zenodo.24312144)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 Adaptive Normalization-free Feature Recalibration (ANFR) addresses data heterogeneity in the backbone model. It replaces activation normalization with weight standardization and adds channel attention to every block, so that the statistics the attention sees are consistent across clients. ANFR works with any aggregation method, in global and personalized federated learning, and under differential privacy.
