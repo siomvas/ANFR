@@ -2,6 +2,7 @@
 
 Code and pre-trained models for **An Architecture Built for Federated Learning: Addressing Data Heterogeneity through Adaptive Normalization-Free Feature Recalibration** (TMLR, 2025).
 
+[![Project page](https://img.shields.io/badge/Project-page-4f6b4e)](https://siomvas.github.io/ANFR/)
 [![Paper](https://img.shields.io/badge/TMLR-2025-blue)](https://openreview.net/forum?id=GtdYFLsblb)
 [![arXiv](https://img.shields.io/badge/arXiv-2410.02006-b31b1b.svg)](https://arxiv.org/abs/2410.02006)
 [![Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-models-ffcc4d)](https://huggingface.co/adcw447)
